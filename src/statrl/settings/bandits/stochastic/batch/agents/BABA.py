@@ -237,6 +237,10 @@ class BABA(BatchBanditAgent):
     # ------------------------------------------------------------------
 
     def batchupdate(self, batcharm, batchreward):
+
+        # OAM: I suspect we should actually update best arm found so far:
+        # self._cr = randmax(self._means)
+
         # ── update cumulative arm statistics ──────────────────────────────
         for arm, rew in zip(batcharm, batchreward):
             self._counts[arm]      += 1
@@ -257,6 +261,7 @@ class BABA(BatchBanditAgent):
 
         elif phase == 2:
             # Snapshot mean and count of a1,r for use in phase 3
+            #OAM: Shouldn't we update  self._a1_r      = randmax(self._means)?
             self._s1         = int(self._counts[self._a1_r])
             self._mean_a1_p2 = self._means[self._a1_r]
 

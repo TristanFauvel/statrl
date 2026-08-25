@@ -68,10 +68,10 @@ bern-exotic6:
 
 bern-baba6:
   entrypoint: "parametric:BatchBernoulliBandit"
-  displayname: "Bernoulli - BABA ($10^4$) batch schedule"
+  displayname: "Bernoulli - BABA ($2.10^4$) batch schedule"
   kwargs:
     means: simple6
-    batchschedule: baba, 10000
+    batchschedule: baba, 20000
 
 
 # Bernoulli 4 arms:
@@ -145,10 +145,10 @@ bern-exotic4:
 
 bern-baba4:
   entrypoint: "parametric:BatchBernoulliBandit"
-  displayname: "Bernoulli - BABA ($10^4$) batch schedule"
+  displayname: "Bernoulli - BABA ($2.10^4$) batch schedule"
   kwargs:
     means: simple4
-    batchschedule: baba, 10000
+    batchschedule: baba, 20000
 
 
 #Truncated Gaussian 6 arms
@@ -162,10 +162,10 @@ trunc-constant6:
 
 trunc-baba6:
   entrypoint: "parametric:BatchTruncatedGaussianBandit"
-  displayname: "Truncated Gaussian - BABA ($10^4$) schedule"
+  displayname: "Truncated Gaussian - BABA ($2.10^4$) schedule"
   kwargs:
     means: simple6
-    batchschedule: baba, 10000
+    batchschedule: baba, 20000
 
 
 trunc-linear6:
@@ -188,6 +188,7 @@ trunc-cubic6:
   kwargs:
     means: simple6
     batchschedule: cubic
+
 trunc-exp6:
   entrypoint: "parametric:BatchTruncatedGaussianBandit"
   displayname: "Truncated Gaussian - Exponential batch ($B_\\ell=2^\\ell$)"
@@ -239,10 +240,10 @@ trunc-constant4:
 
 trunc-baba4:
   entrypoint: "parametric:BatchTruncatedGaussianBandit"
-  displayname: "Truncated Gaussian - BABA ($10^4$) schedule"
+  displayname: "Truncated Gaussian - BABA ($2.10^4$) schedule"
   kwargs:
     means: simple4
-    batchschedule: baba, 10000
+    batchschedule: baba, 20000
 
 
 trunc-linear4:

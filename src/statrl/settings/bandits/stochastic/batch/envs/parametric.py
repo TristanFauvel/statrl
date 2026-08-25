@@ -71,7 +71,7 @@ class BatchBernoulliBandit(BatchMAB):
 
 
 class BatchTruncatedGaussianBandit(BatchMAB):
-    def __init__(self, means, sigma: float = 0.5, low: float = -1.0, high: float = 1.0, batchschedule="constant", name="BMAB-TGaussian"):
+    def __init__(self, means, sigma: float = 0.3, low: float = -1.0, high: float = 1.0, batchschedule="constant", name="BMAB-TGaussian"):
 
         if (type(batchschedule) is str):
             if ("," in batchschedule):

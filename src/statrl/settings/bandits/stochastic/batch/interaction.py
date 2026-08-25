@@ -17,7 +17,6 @@ class BatchBanditInteraction(Interaction):
 
         for t in range(horizon):
             batchaction = learner.batchplay(B)  # Get action
-
             batchreward, info = env.step(batchaction)  # Get response
             learner.batchupdate(batchaction, batchreward)  # Update learners
 
