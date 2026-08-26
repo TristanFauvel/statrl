@@ -35,7 +35,7 @@ class UCB(BanditAgent):
         UCB index per arm.
     """
 
-    def __init__(self, nbArms, delta, sigma=0.5, name="UCB"):
+    def __init__(self, nbArms, delta=None, sigma=0.5, name="UCB"):
         """
         Parameters
         ----------

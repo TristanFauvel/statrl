@@ -61,7 +61,7 @@ def test_massive() -> None:
 
     agents = [IMED(env.number_arms,klBern, name="IMED-Bern"),
               #IMED(env.number_arms,klGauss,name="IMED-Gauss"),
-              UCB(env.number_arms,None),
+              UCB(env.number_arms),
               TS(env.number_arms,name="TS-Bern")]
     oracle = Oracle(env)
     runLargeMulticoreExperiment(env,agents,oracle, interaction,timeHorizon=1000,  nbReplicates=50)
