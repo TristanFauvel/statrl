@@ -52,7 +52,10 @@ class IMED(BanditAgent):
         """
         self.kl = kullback
         self.nA = nbArms
-        BanditAgent.__init__(self, name=name)
+        if name==None:
+            BanditAgent.__init__(self, name="IMED")
+        else:
+            BanditAgent.__init__(self, name=name)
 
     def reset(self) -> None:
         """
