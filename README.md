@@ -33,11 +33,19 @@ Every bandit setting shares the same protocol:
 
 ## Implemented settings
 
-Under `statrl.settings.bandits`:
 
+Under `statrl.settings`:
+
+BANDITS:
 - **`stochastic.anytime`** 
 - **`stochastic.knownhorizon`** : horizon-aware wrapper over the anytime setting.
+- **`stochastic.batch`** : when considering batch schedule.
+- **`stochastic.kernel`** : RKHS structure on arms.
 - **`adversarial.lipschitz`** : an adversarial Lipschitz forecaster.
+
+MARKOV DECISION PROCESSES:
+- **`discrete_nostructure`**: Abstract discrete MDPs.
+- **`gridworld`**: Gridworld MDPs.
 
 ## Running experiments
 
