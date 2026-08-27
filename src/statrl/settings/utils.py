@@ -327,6 +327,11 @@ def KLinf_threshold(reward_history, mean_threshold, upper_bound=1.0, custom_opti
     # dual objective is attained on the boundary 0 or 1/(B-mu).
     # ~x2 speedup on some bandit instances.
     # If problem, fall back to standard minimize_scalar.
+
+    # Pb when X>= upper_bound
+    l_plus = 1e12 if mean_threshold == upper_bound else 1 / (upper_bound - mean_threshold)
+    l_plus -= 1e-12  # To avoid reaching upper_bound?
+
     fallback = False
     if custom_optim:
         def f(l):
@@ -334,9 +339,6 @@ def KLinf_threshold(reward_history, mean_threshold, upper_bound=1.0, custom_opti
 
         def jac(l):
             return -np.mean((X - mean_threshold) / (1 - (X - mean_threshold) * l))
-
-        #Pb when X>= upper_bound
-        l_plus = 1e12 if mean_threshold == upper_bound else 1 / (upper_bound - mean_threshold)
 
         if jac(0) * jac(l_plus) >= 0:
             kinf = np.maximum(f(0), f(l_plus))
@@ -354,7 +356,7 @@ def KLinf_threshold(reward_history, mean_threshold, upper_bound=1.0, custom_opti
             return -np.mean(np.log(1 - (X - mean_threshold) * l))
 
         ret = minimize_scalar(
-            f, method='bounded', bounds=(0, 1 / (upper_bound - mean_threshold))
+            f, method='bounded', bounds=(0, l_plus)
         )
         if ret.success:
             kinf = -ret.fun

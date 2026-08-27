@@ -1,8 +1,8 @@
 
 
 import numpy as np
-from statrl.settings.bandits.batch.environment import BatchMAB
-from statrl.settings.bandits.batch.agent import BatchBanditAgent
+from statrl.settings.bandits.stochastic.batch.environment import BatchMAB
+from statrl.settings.bandits.stochastic.batch.agent import BatchBanditAgent
 
 from statrl.experiments.onerun import Interaction
 
@@ -20,10 +20,10 @@ class BatchBanditInteraction(Interaction):
     Examples
     --------
     >>> from statrl.settings.bandits.stochastic.anytime.envs.parametric import BernoulliBandit
-    >>> from statrl.settings.bandits.batch.environment import BatchMAB
-    >>> from statrl.settings.bandits.batch.agents.BatchIMED import BatchIMED
+    >>> from statrl.settings.bandits.stochastic.batch.environment import BatchMAB
+    >>> from statrl.settings.bandits.stochastic.batch.agents.BIMED import BIMED
     >>> env = BatchMAB(BernoulliBandit([0.2, 0.9, 0.5]), batchsize=[4] * 20)
-    >>> BatchBanditInteraction().run(env, BatchIMED(3), horizon=20).shape
+    >>> BatchBanditInteraction().run(env, BIMED(3), horizon=20).shape
     (20,)
     """
 
@@ -55,7 +55,6 @@ class BatchBanditInteraction(Interaction):
 
         for t in range(horizon):
             batchaction = learner.batchplay(B)  # Get action
-
             batchreward, info = env.step(batchaction)  # Get response
             learner.batchupdate(batchaction, batchreward)  # Update learners
 

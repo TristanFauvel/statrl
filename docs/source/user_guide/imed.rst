@@ -125,7 +125,7 @@ is why :func:`~statrl.settings.utils.klBern` clips its arguments into
 Variants
 --------
 
-- :class:`~statrl.settings.bandits.batch.agents.BatchIMED.BatchIMED` — batched
+- :class:`~statrl.settings.bandits.stochastic.batch.agents.BIMED.BIMED` — batched
   and distribution-free, using :math:`K_{\inf}` in place of a parametric
   divergence. See :doc:`batch`.
 - :class:`~statrl.settings.markovdecisionprocess.discrete_nostructure.agents.IMED_RL.IMEDRL`

@@ -38,7 +38,7 @@ class StochasticBanditEnv(Environment):
     --------
     statrl.settings.bandits.stochastic.anytime.envs.parametric.BernoulliBandit :
         Factory for a Bernoulli instance.
-    statrl.settings.bandits.batch.environment.BatchMAB :
+    statrl.settings.bandits.stochastic.batch.environment.BatchMAB :
         Wrapper turning any instance into a batched bandit.
 
     Examples

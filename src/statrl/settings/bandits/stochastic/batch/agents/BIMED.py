@@ -1,4 +1,4 @@
-from statrl.settings.bandits.batch.agent import BatchBanditAgent
+from statrl.settings.bandits.stochastic.batch.agent import BatchBanditAgent
 from statrl.settings.utils import randmin,randmax, KLinf_threshold
 
 import numpy as np
@@ -71,8 +71,6 @@ class BIMED(BatchBanditAgent):
 
     See Also
     --------
-    statrl.settings.bandits.batch.agents.BatchIMED.BatchIMED :
-        Caches :math:`K_{\\inf}` per arm instead of recomputing it.
     statrl.settings.bandits.stochastic.anytime.agents.IMED.IMED :
         The unbatched, parametric original.
 

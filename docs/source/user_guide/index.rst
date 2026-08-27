@@ -32,7 +32,7 @@ Choosing a setting
      - IMED, via a wrapper
    * - Actions committed in blocks, feedback delayed
      - :doc:`batch`
-     - BatchIMED
+     - BIMED
    * - A continuous action space with adversarial rewards
      - :doc:`adversarial_lipschitz`
      - ALF

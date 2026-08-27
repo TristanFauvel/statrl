@@ -49,6 +49,20 @@ Every setting shares the same protocol:
 | Agent       | `reset()` starts a run; `select_arm()` chooses an arm; `update(arm, reward)` learns.    |
 | Interaction | `run(env, learner, horizon)` runs the loop and returns cumulative expected scores.      |
 
+## Implemented settings
+
+Under `statrl.settings`:
+
+BANDITS:
+- **`stochastic.anytime`**
+- **`stochastic.knownhorizon`** : horizon-aware wrapper over the anytime setting.
+- **`stochastic.batch`** : when considering batch schedule.
+- **`stochastic.kernel`** : RKHS structure on arms.
+- **`adversarial.lipschitz`** : an adversarial Lipschitz forecaster.
+
+MARKOV DECISION PROCESSES:
+- **`discrete_nostructure`**: Abstract discrete MDPs.
+- **`gridworld`**: Gridworld MDPs.
 
 ## Running experiments
 

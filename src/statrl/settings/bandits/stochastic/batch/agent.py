@@ -29,7 +29,7 @@ class BatchBanditAgent(ABC):
 
     See Also
     --------
-    statrl.settings.bandits.batch.interaction.BatchBanditInteraction :
+    statrl.settings.bandits.stochastic.batch.interaction.BatchBanditInteraction :
         The loop that drives these agents.
     """
 
@@ -55,7 +55,7 @@ class BatchBanditAgent(ABC):
             If not overridden. Agents whose :meth:`batchplay` builds a batch
             from repeated single pulls must implement this; agents that decide
             a batch as a whole, such as
-            :class:`~statrl.settings.bandits.batch.agents.BABA.BABA`, need not.
+            :class:`~statrl.settings.bandits.stochastic.batch.agents.BABA.BABA`, need not.
         """
         raise NotImplementedError
 

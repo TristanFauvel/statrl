@@ -1,7 +1,7 @@
 Batched bandits
 ===============
 
-*Module:* ``statrl.settings.bandits.batch``
+*Module:* ``statrl.settings.bandits.stochastic.batch``
 
 In the **batched** setting the agent must commit to a whole block of pulls
 before observing any of their rewards. This is the realistic regime whenever
@@ -18,14 +18,14 @@ schedules matter as much as algorithms here.
 The environment
 ---------------
 
-:class:`~statrl.settings.bandits.batch.environment.BatchMAB` wraps any
+:class:`~statrl.settings.bandits.stochastic.batch.environment.BatchMAB` wraps any
 :class:`~statrl.settings.bandits.stochastic.anytime.environment.StochasticBanditEnv`,
 so every stochastic instance is available here for free:
 
 .. doctest::
 
    >>> from statrl.settings.bandits.stochastic.anytime.envs.parametric import BernoulliBandit
-   >>> from statrl.settings.bandits.batch.environment import BatchMAB
+   >>> from statrl.settings.bandits.stochastic.batch.environment import BatchMAB
    >>>
    >>> env = BatchMAB(BernoulliBandit([0.2, 0.9, 0.5]), batchsize=[2, 4, 8])
    >>> info = env.reset()
@@ -78,17 +78,17 @@ The environment factories accept a schedule by name:
    * - ``"abrupt"``
      - 100, then :math:`(\ell+1)^3`
      - Tests adaptation to a sudden change.
-   * - ``"exotic1"``, ``"exotic2"``
+   * - ``"exotic"``
      - Cycles four growth rates
      - Stresses agents assuming a regular schedule.
    * - ``"baba,<horizon>"``
      - The BABA epoch grid
-     - Required by :class:`~statrl.settings.bandits.batch.agents.BABA.BABA`.
+     - Required by :class:`~statrl.settings.bandits.stochastic.batch.agents.BABA.BABA`.
 
 The agent
 ---------
 
-:class:`~statrl.settings.bandits.batch.agent.BatchBanditAgent` exposes two
+:class:`~statrl.settings.bandits.stochastic.batch.agent.BatchBanditAgent` exposes two
 levels. ``play()`` and ``update(arm, reward)`` are the per-pull rules;
 ``batchplay(batchsize)`` and ``batchupdate(batcharm, batchreward)`` are what the
 interaction loop calls, and are the ones a subclass must implement.
@@ -108,33 +108,28 @@ Shipped agents
 
    * - Agent
      - Description
-   * - :class:`~statrl.settings.bandits.batch.agents.BatchIMED.BatchIMED`
-     - IMED with the non-parametric :math:`K_{\inf}`, cached once per batch.
-       The default choice. Set ``batchagnostic=True`` for a control that
-       ignores the batch structure.
-   * - :class:`~statrl.settings.bandits.batch.agents.BatchIMED.BatchIMED2`
-     - Same, but throttles an arm by accumulated *information* rather than by
-       pull count.
-   * - :class:`~statrl.settings.bandits.batch.agents.BIMED.BIMED`
-     - Recomputes :math:`K_{\inf}` inside the batch instead of caching it.
-   * - :class:`~statrl.settings.bandits.batch.agents.BCB.BCB`
+   * - :class:`~statrl.settings.bandits.stochastic.batch.agents.BIMED.BIMED`
+     - IMED with the non-parametric :math:`K_{\inf}`, recomputed inside the
+       batch. Set ``batchagnostic=True`` for a control that ignores the batch
+       structure.
+   * - :class:`~statrl.settings.bandits.stochastic.batch.agents.BCB.BCB`
      - Non-parametric Thompson sampling with a Dirichlet prior anchored at the
        reward bound. See [Gautron2024]_.
-   * - :class:`~statrl.settings.bandits.batch.agents.BCB.BCBnaif`
+   * - :class:`~statrl.settings.bandits.stochastic.batch.agents.BCB.BCBnaif`
      - BCB without the optimistic within-batch count increment; the control
        isolating what that increment buys.
-   * - :class:`~statrl.settings.bandits.batch.agents.BABA.BABA`
+   * - :class:`~statrl.settings.bandits.stochastic.batch.agents.BABA.BABA`
      - Five-phase schedule-driven learner. See [Jin2021]_. Requires the
        ``"baba,<horizon>"`` schedule.
-   * - :class:`~statrl.settings.bandits.batch.agents._Oracle.Oracle`
+   * - :class:`~statrl.settings.bandits.stochastic.batch.agents._Oracle.Oracle`
      - Fills every batch with the best arm; the regret reference.
-   * - :class:`~statrl.settings.bandits.batch.agents._Random.Random`
+   * - :class:`~statrl.settings.bandits.stochastic.batch.agents._Random.Random`
      - Uniform exploration; the control whose regret batching does not affect.
 
 Every agent except BABA takes a ``bound`` — a known upper bound on the reward
 support. It is what makes the non-parametric divergence well defined, so
 understating it invalidates the index. Pair them with
-:class:`~statrl.settings.bandits.batch.envs.parametric.BatchTruncatedGaussianBandit`,
+:class:`~statrl.settings.bandits.stochastic.batch.envs.parametric.BatchTruncatedGaussianBandit`,
 whose support is bounded by construction.
 
 A full run
@@ -142,14 +137,14 @@ A full run
 
 .. doctest::
 
-   >>> from statrl.settings.bandits.batch.agents.BatchIMED import BatchIMED
-   >>> from statrl.settings.bandits.batch.agents._Oracle import Oracle
-   >>> from statrl.settings.bandits.batch.interaction import BatchBanditInteraction
+   >>> from statrl.settings.bandits.stochastic.batch.agents.BIMED import BIMED
+   >>> from statrl.settings.bandits.stochastic.batch.agents._Oracle import Oracle
+   >>> from statrl.settings.bandits.stochastic.batch.interaction import BatchBanditInteraction
    >>>
    >>> env = BatchMAB(BernoulliBandit([0.2, 0.9, 0.5]), batchsize=[8] * 100)
    >>> interaction = BatchBanditInteraction()
    >>>
-   >>> scores = interaction.run(env, BatchIMED(3, bound=1.0), horizon=100)
+   >>> scores = interaction.run(env, BIMED(3, bound=1.0), horizon=100)
    >>> oracle_scores = interaction.run(env, Oracle(env), horizon=100)
    >>> bool((oracle_scores - scores)[-1] < 60)     # 800 pulls, 8 at a time
    True

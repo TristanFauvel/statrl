@@ -20,9 +20,9 @@ Usage
 
 import math
 import numpy as np
-from statrl.settings.bandits.batch.agent import BatchBanditAgent
-from statrl.settings.bandits.batch.agents.baba_schedule import g_baba
-
+from statrl.settings.bandits.stochastic.batch.agent import BatchBanditAgent
+from statrl.settings.bandits.stochastic.batch.agents.baba_schedule import g_baba
+from statrl.settings.utils import randmin,randmax
 
 # ---------------------------------------------------------------------------
 # KL utilities
@@ -52,7 +52,7 @@ def _kl_plus(mu: float, mu_star: float, kl_fn) -> float:
 # Main class
 # ---------------------------------------------------------------------------
 
-from statrl.settings.bandits.batch.agents.baba_schedule import compute_baba_grid
+from statrl.settings.bandits.stochastic.batch.agents.baba_schedule import compute_baba_grid
 class BABA(BatchBanditAgent):
     """Batched Anytime Bandit Algorithm
     BABA divides the run into *epochs*, each split into five phases with a
@@ -70,7 +70,7 @@ class BABA(BatchBanditAgent):
         mode.
     phase_labels : list of int, optional
         Phase (1 to 5) of each round. Defaults to the output of
-        :func:`~statrl.settings.bandits.batch.agents.baba_schedule.compute_baba_grid`
+        :func:`~statrl.settings.bandits.stochastic.batch.agents.baba_schedule.compute_baba_grid`
         for ``horizon`` and ``nbArms``.
     epoch_ids : list of int, optional
         One-based epoch index of each round, from the same source.
@@ -91,7 +91,7 @@ class BABA(BatchBanditAgent):
 
     See Also
     --------
-    statrl.settings.bandits.batch.agents.baba_schedule.compute_baba_grid :
+    statrl.settings.bandits.stochastic.batch.agents.baba_schedule.compute_baba_grid :
         Builds the batch sizes, phases, and epochs BABA runs on.
 
     References
@@ -156,6 +156,7 @@ class BABA(BatchBanditAgent):
         snapshots taken at the end of phases 1 and 2. The schedule itself is
         fixed at construction and is not recomputed.
         """
+        super().reset()
         self._round = 0
 
         # Cumulative arm statistics (updated via batchupdate)
@@ -303,6 +304,9 @@ class BABA(BatchBanditAgent):
         batchreward : list of float
             The rewards observed for them, in the same order.
         """
+        # OAM: I suspect we should actually update best arm found so far:
+        # self._cr = randmax(self._means)
+
         # ── update cumulative arm statistics ──────────────────────────────
         for arm, rew in zip(batcharm, batchreward):
             self._counts[arm]      += 1
@@ -316,12 +320,14 @@ class BABA(BatchBanditAgent):
         # ── per-phase state transitions ───────────────────────────────────
         if phase == 1:
             # Identify the arm with the highest empirical mean after phase 1
-            self._a1_r      = int(np.argmax(self._means))
+            #self._a1_r      = int(np.argmax(self._means))
+            self._a1_r      = randmax(self._means)
             self._means_p1  = self._means.copy()
             self._counts_p1 = self._counts.copy()
 
         elif phase == 2:
             # Snapshot mean and count of a1,r for use in phase 3
+            #OAM: Shouldn't we update  self._a1_r      = randmax(self._means)?
             self._s1         = int(self._counts[self._a1_r])
             self._mean_a1_p2 = self._means[self._a1_r]
 
@@ -346,7 +352,9 @@ class BABA(BatchBanditAgent):
             if not self._F:
                 self._cr = self._a1_r
             else:
-                self._cr = int(np.argmax(self._means))
+                #self._cr = int(np.argmax(self._means))
+                self._cr = randmax(self._means)
+
 
         # phase 5: no state change; cr carries over to next epoch
 

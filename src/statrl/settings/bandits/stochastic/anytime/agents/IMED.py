@@ -56,7 +56,7 @@ class IMED(BanditAgent):
 
     See Also
     --------
-    statrl.settings.bandits.batch.agents.BatchIMED.BatchIMED :
+    statrl.settings.bandits.stochastic.batch.agents.BIMED.BIMED :
         The batched, distribution-free variant built on
         :func:`~statrl.settings.utils.KLinf_threshold`.
     statrl.settings.markovdecisionprocess.discrete_nostructure.agents.IMED_RL.IMEDRL :
@@ -89,7 +89,10 @@ class IMED(BanditAgent):
     def __init__(self, nbArms: int, kullback: Callable[[float, float], float] = klGauss, name="IMED") -> None:
         self.kl = kullback
         self.nA = nbArms
-        BanditAgent.__init__(self, name=name)
+        if name==None:
+            BanditAgent.__init__(self, name="IMED")
+        else:
+            BanditAgent.__init__(self, name=name)
 
     def reset(self) -> None:
         """Clear every statistic before a new independent run.

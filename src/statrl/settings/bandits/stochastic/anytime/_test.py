@@ -10,6 +10,7 @@ def test_render() -> None:
     means=[0.2,0.9,0.7,0.5]
 
     env = BernoulliBandit(means)
+    env.displayname="Bernoulli bandits"
     random = Random(env)
     oracle = Oracle(env)
     interaction = BanditInteraction()
@@ -45,6 +46,9 @@ def test_run() -> None:
 
 def test_massive() -> None:
     from statrl.settings.bandits.stochastic.anytime.agents.IMED import IMED
+    from statrl.settings.bandits.stochastic.anytime.agents.UCB import UCB
+    from statrl.settings.bandits.stochastic.anytime.agents.TS import TS
+
     from statrl.settings.utils import klBern,klGauss
 
 
@@ -54,8 +58,11 @@ def test_massive() -> None:
     env = make(envs["bernoulli_simple"])
 
     interaction = BanditInteraction()
+
     agents = [IMED(env.number_arms,klBern, name="IMED-Bern"),
-              IMED(env.number_arms,klGauss,name="IMED-Gauss")]
+              #IMED(env.number_arms,klGauss,name="IMED-Gauss"),
+              UCB(env.number_arms),
+              TS(env.number_arms,name="TS-Bern")]
     oracle = Oracle(env)
     runLargeMulticoreExperiment(env,agents,oracle, interaction,timeHorizon=1000,  nbReplicates=50)
 

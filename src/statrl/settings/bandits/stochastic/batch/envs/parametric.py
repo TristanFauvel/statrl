@@ -1,8 +1,6 @@
-import numpy as np
+from statrl.settings.bandits.stochastic.batch.environment import BatchMAB
 
-from statrl.settings.bandits.batch.environment import BatchMAB
-
-from statrl.settings.bandits.stochastic.anytime.envs.parametric import BernoulliBandit, BinomialBandit, GaussianBandit, TruncatedGaussianBandit
+from statrl.settings.bandits.stochastic.anytime.envs.parametric import BernoulliBandit, GaussianBandit, TruncatedGaussianBandit
 
 
 import math
@@ -13,29 +11,12 @@ _B_LINEAR    = lambda ell: int(ell + 1)
 _B_QUADRATIC = lambda ell: int((ell + 1) ** 2)
 _B_CUBIC     = lambda ell: int((ell + 1) ** 3)
 _B_EXP       = lambda ell: int(2 ** ell)
+_B_SEXP      =  lambda ell: int(math.exp(ell**1.5))
 _B_DOUBLE_EXP = lambda ell: int(math.exp(2 ** ell))
-_B_ABRUPT = lambda ell: 100 if ell<3 else int((ell+1)**3)
+_B_ABRUPT = lambda ell: 100 if (ell % 4==1) else int((ell+1)**3)
 
-def exotic_schedule1(t):
-    """Batch schedule cycling through constant, linear, cubic, and exponential.
-
-    Parameters
-    ----------
-    t : int
-        Round index.
-
-    Returns
-    -------
-    int
-        Batch size for round ``t``.
-    """
-    schedule= {0:_B_CONST, 1: _B_LINEAR, 2: _B_CUBIC, 3: _B_EXP}
-    return schedule[(t % 4)](t)
-def exotic_schedule2(t):
-    """Batch schedule cycling through constant, exponential, linear, and cubic.
-
-    Same idea as :func:`exotic_schedule1` with the middle two phases swapped,
-    so the exponential jump lands early in the cycle rather than late.
+def exotic_schedule(t):
+    """Batch schedule cycling through linear, exponential, constant, and cubic.
 
     Parameters
     ----------
@@ -47,13 +28,12 @@ def exotic_schedule2(t):
     int
         Batch size for round ``t``.
     """
-    schedule= {0:_B_CONST, 1: _B_EXP, 2:_B_LINEAR, 3:_B_CUBIC}
+    schedule= {0:_B_LINEAR, 1: _B_EXP, 2:_B_CONST, 3:_B_CUBIC}
     return schedule[(t % 4)](t)
 
-_B_EXOTIC1 = exotic_schedule1
-_B_EXOTIC2 = exotic_schedule2
+_B_EXOTIC = exotic_schedule
 
-from statrl.settings.bandits.batch.agents.baba_schedule import compute_baba_grid
+from statrl.settings.bandits.stochastic.batch.agents.baba_schedule import compute_baba_grid
 def baba_schedule(horizon, nbArms):
     """Batch sizes of the BABA epoch grid, as a plain list.
 
@@ -73,7 +53,7 @@ def baba_schedule(horizon, nbArms):
 
     See Also
     --------
-    statrl.settings.bandits.batch.agents.baba_schedule.compute_baba_grid :
+    statrl.settings.bandits.stochastic.batch.agents.baba_schedule.compute_baba_grid :
         Returns the phase and epoch labels alongside these sizes.
     """
     batch_sizes, _, _, _ = compute_baba_grid(horizon, nbArms, None, alpha=3)
@@ -81,9 +61,8 @@ def baba_schedule(horizon, nbArms):
 
 
 schedule_catalogue= {"constant": _B_CONST, "linear": _B_LINEAR, "quadratic": _B_QUADRATIC, "cubic":_B_CUBIC,
-            "exp": _B_EXP, "doubleexp":_B_DOUBLE_EXP, "abrupt":_B_ABRUPT, "exotic1":_B_EXOTIC1, "exotic2":_B_EXOTIC2,
+            "exp": _B_EXP, "surexp": _B_SEXP,"doubleexp":_B_DOUBLE_EXP, "abrupt":_B_ABRUPT, "exotic":_B_EXOTIC
                      }
-
 
 mean_catalogue = {"simple4": [0.1, 0.4, 0.7, 0.9],
                   "simple6": [0.2, 0.6, 0.8, 0.8, 0.95, 0.9]
@@ -102,11 +81,11 @@ class BatchGaussianBandit(BatchMAB):
     batchschedule : str, default='constant'
         Key of ``schedule_catalogue`` — ``"constant"``, ``"linear"``,
         ``"quadratic"``, ``"cubic"``, ``"exp"``, ``"doubleexp"``,
-        ``"abrupt"``, ``"exotic1"``, ``"exotic2"`` — or ``"baba,<horizon>"``
+        ``"abrupt"``, ``"exotic"`` — or ``"baba,<horizon>"``
         to use the BABA grid for that horizon.
     name : str, default='BMAB-Gaussian'
         Accepted but unused: the instance name comes from
-        :class:`~statrl.settings.bandits.batch.environment.BatchMAB`, which
+        :class:`~statrl.settings.bandits.stochastic.batch.environment.BatchMAB`, which
         derives it from the wrapped bandit and the batch sizes.
 
     Raises
@@ -166,13 +145,13 @@ class BatchBernoulliBandit(BatchMAB):
 
 
 class BatchTruncatedGaussianBandit(BatchMAB):
-    """Batched bandit with Gaussian arms truncated to ``[low, high]``. 
+    """Batched bandit with Gaussian arms truncated to ``[low, high]``.
 
     Parameters
     ----------
     means : array-like of float or str
         Means of the untruncated Gaussians, or a key of ``mean_catalogue``.
-    sigma : float, default=0.5
+    sigma : float, default=0.3
         Common standard deviation before truncation.
     low, high : float, default=-1.0, 1.0
         Bounds of the reward support.
@@ -187,7 +166,7 @@ class BatchTruncatedGaussianBandit(BatchMAB):
         If ``batchschedule`` or a string ``means`` names no catalogue entry.
     """
 
-    def __init__(self, means, sigma: float = 0.5, low: float = -1.0, high: float = 1.0, batchschedule="constant", name="BMAB-TGaussian"):
+    def __init__(self, means, sigma: float = 0.3, low: float = -1.0, high: float = 1.0, batchschedule="constant", name="BMAB-TGaussian"):
 
         if (type(batchschedule) is str):
             if ("," in batchschedule):

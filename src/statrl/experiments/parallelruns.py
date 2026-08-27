@@ -43,7 +43,7 @@ def multicoreRuns(env: Any, learner: Any, interact: Any, nbReplicates: int, time
     -----
     Uses all available cores (``n_jobs=-1``). Everything passed in must be
     picklable, which is why
-    :class:`~statrl.settings.bandits.batch.environment.BatchMAB` accepts a
+    :class:`~statrl.settings.bandits.stochastic.batch.environment.BatchMAB` accepts a
     plain list of batch sizes rather than only a callable.
     """
     #FIXME  Should be made more general? indep of gymnasium?

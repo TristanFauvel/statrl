@@ -11,7 +11,7 @@ statrl
 **environment** holding the problem, an **agent** that acts and learns, and an
 **interaction loop** that runs the two against each other and returns a
 cumulative-score time series. On top of that sit reference algorithms (IMED,
-PSRL, IMED-RL, BatchIMED, BABA, an adversarial Lipschitz forecaster) and an
+PSRL, IMED-RL, BIMED, BABA, an adversarial Lipschitz forecaster) and an
 ``experiments`` harness for running many replicates in parallel and plotting
 regret.
 

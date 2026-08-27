@@ -1,7 +1,7 @@
 
 
 
-from statrl.settings.bandits.batch.agent import BatchBanditAgent
+from statrl.settings.bandits.stochastic.batch.agent import BatchBanditAgent
 
 class Oracle(BatchBanditAgent):
     """Baseline filling every batch with the best arm. 
@@ -14,7 +14,7 @@ class Oracle(BatchBanditAgent):
     Examples
     --------
     >>> from statrl.settings.bandits.stochastic.anytime.envs.parametric import BernoulliBandit
-    >>> from statrl.settings.bandits.batch.environment import BatchMAB
+    >>> from statrl.settings.bandits.stochastic.batch.environment import BatchMAB
     >>> Oracle(BatchMAB(BernoulliBandit([0.2, 0.9]), [3])).batchplay(3)
     [1, 1, 1]
     """

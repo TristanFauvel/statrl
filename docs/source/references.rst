@@ -13,9 +13,8 @@ Algorithms
 
    Introduces IMED and the non-parametric :math:`K_{\inf}`. Implemented by
    :class:`~statrl.settings.bandits.stochastic.anytime.agents.IMED.IMED`,
-   :func:`~statrl.settings.utils.KLinf_threshold`, and the batched variants
-   :class:`~statrl.settings.bandits.batch.agents.BatchIMED.BatchIMED` and
-   :class:`~statrl.settings.bandits.batch.agents.BIMED.BIMED`.
+   :func:`~statrl.settings.utils.KLinf_threshold`, and the batched variant
+   :class:`~statrl.settings.bandits.stochastic.batch.agents.BIMED.BIMED`.
 
 .. [Pesquerel2022] Pesquerel, F. and Maillard, O.-A.
    "IMED-RL: Regret optimal learning of ergodic Markov decision processes."
@@ -45,7 +44,7 @@ Algorithms
    *International Conference on Machine Learning (ICML)*, 2021.
 
    The five-phase epoch structure of
-   :class:`~statrl.settings.bandits.batch.agents.BABA.BABA`.
+   :class:`~statrl.settings.bandits.stochastic.batch.agents.BABA.BABA`.
 
 .. [Gautron2024] Gautron, R., Maillard, O.-A., Preux, P. and Corbeels, M.
    "Bandits with bounded CVaR constraints."
@@ -53,7 +52,7 @@ Algorithms
 
    Non-parametric Thompson sampling with a Dirichlet prior anchored at the
    reward bound. Implemented, in the ``CVaR = Expectation`` regime, by
-   :class:`~statrl.settings.bandits.batch.agents.BCB.BCB`.
+   :class:`~statrl.settings.bandits.stochastic.batch.agents.BCB.BCB`.
 
 Environments
 ------------

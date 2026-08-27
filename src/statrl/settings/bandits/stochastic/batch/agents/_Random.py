@@ -3,7 +3,7 @@
 
 
 
-from statrl.settings.bandits.batch.agent import BatchBanditAgent
+from statrl.settings.bandits.stochastic.batch.agent import BatchBanditAgent
 import numpy as np
 class Random(BatchBanditAgent):
     """Uniform exploration: fill each batch with independent random arms. 
@@ -15,7 +15,7 @@ class Random(BatchBanditAgent):
 
     See Also
     --------
-    statrl.settings.bandits.batch.agents._Oracle.Oracle :
+    statrl.settings.bandits.stochastic.batch.agents._Oracle.Oracle :
         The opposite baseline.
     """
 
