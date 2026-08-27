@@ -253,7 +253,7 @@ class PSRL(MDPAgent):
                 choice = [arg[a] for a in arg2]
                 self.policy[s] = [1. / len(choice) if x in choice else 0 for x in range(self.nA)]
 
-            diff = [abs(x - y) for (x, y) in zip(u1, u0)]
+            diff = [x - y for (x, y) in zip(u1, u0)]
             if (max(diff) - min(diff)) < epsilon:
                 self.u = u1 - min(u1)
                 break
