@@ -235,9 +235,8 @@ class PSRL(MDPAgent):
         """
         u0 = self.u - min(self.u)
         u1 = np.zeros(self.nS)
-        itera = 0
 
-        while True:
+        for _ in range(max_iter):
             for s in range(self.nS):
                 temp = np.zeros(self.nA)
                 for a in range(self.nA):
@@ -255,16 +254,13 @@ class PSRL(MDPAgent):
 
             diff = [x - y for (x, y) in zip(u1, u0)]
             if (max(diff) - min(diff)) < epsilon:
-                self.u = u1 - min(u1)
                 break
-            elif itera > max_iter:
-                self.u = u1 - min(u1)
-                print("[PSRL] No convergence in the VI at time ", self.t, " before ", max_iter, " iterations.")
-                break
-            else:
-                u0 = u1 - min(u1)
-                u1 = np.zeros(self.nS)
-                itera += 1
+            u0 = u1 - min(u1)
+            u1 = np.zeros(self.nS)
+        else:
+            print("[PSRL] No convergence in the VI at time ", self.t, " before ", max_iter, " iterations.")
+
+        self.u = u1 - min(u1)
 
     def new_episode(self):
         """Fold in the last episode's counts, sample a fresh MDP, and solve it.
