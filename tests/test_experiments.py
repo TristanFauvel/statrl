@@ -57,7 +57,7 @@ def test_analyzeruns_computes_regret(tmp_path):
 
     alg = [_dump(np.arange(H) * 1.0, f"alg_{i}") for i in range(2)]
     oracle = [_dump(np.arange(H) * 2.0, f"orc_{i}") for i in range(2)]
-    mean, median, q1, q2, times = computeScoreDiffs(
+    mean, median, q1, q2, q3, q4, times = computeScoreDiffs(
         ["alg0"], [alg, oracle], H, "envX", root
     )
     assert len(times) == H
@@ -70,8 +70,8 @@ def test_plotruns_writes_figures(tmp_path):
     curve = np.linspace(0.0, 10.0, H)
     logfile = io.StringIO()
     plotScoreDiffs(
-        ["alg0"], "envX", "title",
-        [curve], [curve], [curve * 0.9], [curve * 1.1],
+        ["alg0"], "envX", ("title", "x", "y"),
+        [curve], [curve], [curve * 0.8], [curve * 0.9], [curve * 1.1], [curve * 1.2],
         list(range(H)), H,
         logfile=logfile, timestamp="t", root_folder=str(tmp_path) + "/",
     )

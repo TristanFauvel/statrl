@@ -4,13 +4,48 @@ import time
 import numpy as np
 
 def computeScoreDiffs(names: list[str], dump_scores: list[list[str]], timeHorizon: int, envName: str, root_folder: str) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray],list[np.ndarray],list[np.ndarray], list[np.ndarray], list[int]]:
-    """
+    """Turn per-replicate score dumps into regret statistics over time.
 
-    :param names: get list of algorithm names
-    :param dump_scores: list of filenames, each getting cumulative rewards for multiple runs. Last file of the list is cum reward of Oracle.
-    :param timeHorizon:
-    :param envName:
-    :return: vectors median, quantile0.25, quantile0.75, timesteps, where median[i] is median of expreimnts at time timesteps[i]
+    Loads every dump, subtracts each agent's cumulative score from the
+    oracle's averaged one to obtain regret, and summarizes the replicates by
+    their mean, median, and four quantiles.
+
+    Parameters
+    ----------
+    names : list of str
+        Agent names, in the same order as ``dump_scores``. Used to name the
+        per-agent regret pickles.
+    dump_scores : list of list of str
+        One list of dump filenames per agent. **The last entry must be the
+        oracle's**, and it is what every other entry is compared against — the
+        function has no other way to tell which agent is the reference.
+    timeHorizon : int
+        Number of rounds each run played.
+    envName : str
+        Environment name, used in the output filenames.
+    root_folder : str
+        Directory the regret pickles are written to.
+
+    Returns
+    -------
+    mean, median : list of ndarray
+        Per-agent mean and median regret at each sampled time.
+    quantile1, quantile2, quantile3, quantile4 : list of ndarray
+        Per-agent regret quantiles at levels 0.1, 0.25, 0.75, and 0.9. The
+        plots shade 0.1-0.9 and 0.25-0.75 as nested bands.
+    times : list of int
+        Sampled time steps, shared by every returned series.
+
+    Notes
+    -----
+    Long runs are downsampled to at most ~1000 points
+    (``skip = timeHorizon // 1000``), which bounds both plot size and memory.
+    Each returned series therefore has ``len(times)`` entries, not
+    ``timeHorizon``.
+
+    The oracle's score is averaged across its replicates *before* the
+    subtraction, so the result is regret against mean oracle performance
+    rather than a paired difference per replicate.
     """
 
     median = []

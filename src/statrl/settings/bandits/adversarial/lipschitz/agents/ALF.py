@@ -4,11 +4,52 @@ from typing import Any, Optional
 from statrl.settings.bandits.adversarial.lipschitz.agent import Agent
 
 class ALFLearner(Agent):
-    """
-    ALF: Adversarial Lipschitz Forecaster (discretization + Hedge)
+    """Adversarial Lipschitz Forecaster
 
     Learns in a continuous Lipschitz bandit/online optimization setting
-    by reducing to a finite expert set.
+    by reducing to a finite expert set, following Maillard and Munos [1]_.
+
+    Parameters
+    ----------
+    action_space : object
+        Continuous domain. Only :class:`~gymnasium.spaces.Box`-like spaces,
+        exposing ``low`` and ``high``, are supported.
+    epsilon : float
+        Cover resolution. The grid uses ``max(2, int(1 / epsilon))`` points
+        per dimension, so the expert count grows exponentially with the
+        dimension of the space.
+    eta : float
+        Learning rate of the exponential weights.
+    horizon : int
+        Time horizon :math:`T`. Stored for tuning ``epsilon`` and ``eta``;
+        this implementation does not tune them for you.
+    metric : object, optional
+        Metric for building the cover. Unused by the current Box grid.
+    sampling : {'argmax', 'sample'}, default='argmax'
+        Whether to play the highest-weight cover point deterministically or
+        draw one from the weight distribution. 
+    Attributes
+    ----------
+    actions : ndarray of shape (n_actions, n_dims)
+        The cover points, i.e. the expert set.
+    n_actions : int
+        Number of cover points.
+    weights : ndarray of shape (n_actions,)
+        Current expert weights, normalized to sum to one.
+    time : int
+        Number of updates performed so far.
+
+    Raises
+    ------
+    NotImplementedError
+        If ``action_space`` exposes no ``low`` / ``high``; a general metric
+        cover is not implemented.
+
+    References
+    ----------
+    .. [1] Maillard, O.-A. and Munos, R. "Online learning in adversarial
+           Lipschitz environments." *European Conference on Machine Learning
+           and Knowledge Discovery in Databases*, 305-320, 2010.
     """
 
     def __init__(
@@ -68,8 +109,18 @@ class ALFLearner(Agent):
     # ================================================================
 
     def select_arm(self, observation: Optional[Any] = None) -> np.ndarray:
-        """
-        Selects an action according to exponential weights.
+        """Pick a cover point according to the current expert weights.
+
+        Parameters
+        ----------
+        observation : object, optional
+            Ignored; ALF plays from its weights alone.
+
+        Returns
+        -------
+        ndarray
+            The chosen cover point. Its index is remembered so that the next
+            :meth:`update` credits the right expert.
         """
 
         probs = self._get_probabilities()
@@ -83,8 +134,21 @@ class ALFLearner(Agent):
         return self.actions[idx]
 
     def update(self, action: np.ndarray, reward: float, observation: Optional[Any] = None) -> None:
-        """
-        Hedge update on discretized expert corresponding to chosen action.
+        """Apply the Hedge update to the expert that was played.
+
+        Multiplies that expert's weight by :math:`e^{\\eta r}` and
+        renormalizes.
+
+        Parameters
+        ----------
+        action : ndarray
+            The action played. Ignored — the expert index recorded by
+            :meth:`select_arm` is used instead.
+        reward : float
+            Observed reward :math:`f_t(x_t)`.
+        observation : object, optional
+            Ignored.
+ 
         """
 
         idx = self.last_idx

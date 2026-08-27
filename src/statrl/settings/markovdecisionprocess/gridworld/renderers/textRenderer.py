@@ -1,15 +1,35 @@
 
 import sys
-from six import StringIO
 from gymnasium import utils
 import string
 
 class GridworldWithWallRenderer:
+    """Print a walled gridworld to stdout as an ASCII map.
+
+    Draws the grid each step, marking the current cell red, walls ``X``, and
+    goal cells ``G``.
+
+    Attributes
+    ----------
+    started : bool
+        Whether the header has been printed yet.
+
+    See Also
+    --------
+    GridworldRenderer : The counterpart for grids without walls.
+    """
 
     def __init__(self):
         self.started = False
 
     def start(self, env) -> None:
+        """Print the header naming the environment, its actions, and the legend.
+
+        Parameters
+        ----------
+        env : object
+            The environment being rendered.
+        """
         self.outfile = sys.stdout
         self.outfile.write("Environment: " + str(env.displayname) + "\n")
         self.outfile.write("Actions: " + str(self._nameActions(env)) + "\n")
@@ -17,6 +37,13 @@ class GridworldWithWallRenderer:
         self.outfile.write("-" * 30 + "\n")
 
     def stop(self, env) -> None:
+        """Print the closing rule at the end of a rendered run.
+
+        Parameters
+        ----------
+        env : object
+            The environment being rendered.
+        """
         self.outfile.write("-" * 30 + "\n")
 
 
@@ -24,6 +51,19 @@ class GridworldWithWallRenderer:
         return string.ascii_uppercase[:env.nA]
 
     def render(self,env,current,lastaction,lastreward):
+        """Print the grid with the current cell highlighted.
+
+        Parameters
+        ----------
+        env : object
+            The gridworld being rendered.
+        current : int
+            Index of the current cell.
+        lastaction : int or None
+            Action just played, or ``None`` before the first step.
+        lastreward : float
+            Reward just observed.
+        """
 
         if (not self.started):
             self.start(env)
@@ -52,10 +92,32 @@ class GridworldWithWallRenderer:
 
 
 class GridworldRenderer:
+    """Print a gridworld without walls to stdout as an ASCII map.
+
+    Draws the grid each step, marking the current cell red and goal cells
+    ``G``.
+
+    Attributes
+    ----------
+    started : bool
+        Whether the header has been printed yet.
+
+    See Also
+    --------
+    GridworldWithWallRenderer : The counterpart for grids with walls.
+    """
+
     def __init__(self):
         self.started = False
 
     def start(self, env) -> None:
+        """Print the header naming the environment, its actions, and the legend.
+
+        Parameters
+        ----------
+        env : object
+            The environment being rendered.
+        """
         self.outfile = sys.stdout
         self.outfile.write("Environment: " + str(env.name) + "\n")
         self.outfile.write("Actions: " + str(self._nameActions(env)) + "\n")
@@ -63,6 +125,13 @@ class GridworldRenderer:
         self.outfile.write("-" * 30 + "\n")
 
     def stop(self, env) -> None:
+        """Print the closing rule at the end of a rendered run.
+
+        Parameters
+        ----------
+        env : object
+            The environment being rendered.
+        """
         self.outfile.write("-" * 30 + "\n")
 
 
@@ -70,12 +139,25 @@ class GridworldRenderer:
         return string.ascii_uppercase[:env.nA]
 
     def render(self,env,current,lastaction,lastreward):
+        """Print the grid with the current cell highlighted.
+
+        Parameters
+        ----------
+        env : object
+            The gridworld being rendered.
+        current : int
+            Index of the current cell.
+        lastaction : int or None
+            Action just played, or ``None`` before the first step.
+        lastreward : float
+            Reward just observed.
+        """
 
         if (not self.started):
             self.start(env)
             self.started = True
 
-        # Print the MDp in text mode.
+        # Print the MDP in text mode.
         # Red  = current state
         # Blue = all states accessible from current state (by playing some action)
         #outfile = sys.stdout

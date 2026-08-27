@@ -50,7 +50,7 @@ class UCB(BanditAgent):
             self.delta = delta
         self.sigma=sigma
         self.nA=nbArms
-        if name==None:
+        if name is None:
             BanditAgent.__init__(self, name="UCB")
         else:
             BanditAgent.__init__(self, name=name)

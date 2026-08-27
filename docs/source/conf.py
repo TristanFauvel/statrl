@@ -21,15 +21,28 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
+    "sphinx.ext.doctest",       # runs the >>> blocks in the narrative pages
+    "sphinx.ext.coverage",      # reports objects autodoc never rendered
     "sphinx_design",            # grid cards on the landing page
 ]
 
 autosummary_generate = True
 templates_path = ["_templates"]
 
-# gymnasium isn't installed in the docs build; mock it so the environment/interaction
-# modules import and their docstrings render.
-autodoc_mock_imports = ["gymnasium"]
+# Nothing is mocked. `pip install .` pulls in gymnasium, so the modules import for
+# real — which the doctest builder needs: a mocked `gymnasium.utils.seeding` returns
+# a Mock where the environments expect a generator, and every example that resets an
+# environment would fail.
+
+# `make coverage` lists documented-but-unrendered objects.
+coverage_show_missing_items = True
+
+# Test only explicit `.. doctest::` directives, i.e. the narrative pages. Docstring
+# `Examples` sections render as plain `>>>` blocks and would be executed here in an
+# empty namespace, where the names their own module defines are not bound. They are
+# covered instead by `pytest --doctest-modules src`, which runs each one inside its
+# module. Both run in CI, so between them every example is executed.
+doctest_test_doctest_blocks = ""
 
 # Napoleon handles the predominant NumPy style; a few docstrings use rst field lists,
 # which autodoc parses natively.
@@ -38,10 +51,18 @@ napoleon_google_docstring = False
 
 autodoc_default_options = {
     "members": True,
-    "undoc-members": True,
+    # Every public object now carries a docstring, so rendering undocumented
+    # members would only produce empty stubs that make the reference look
+    # more complete than it is.
+    "undoc-members": False,
     "show-inheritance": True,
 }
-autodoc_typehints = "description"
+
+# Types come from the hand-written numpydoc `Parameters` sections, which say more
+# than a bare annotation can ("ndarray of shape (nbArms,)"). Rendering annotations
+# as well would duplicate them, and their unqualified names are ambiguous anyway:
+# `BanditAgent` names two different classes across the stochastic settings.
+autodoc_typehints = "none"
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),

@@ -23,9 +23,10 @@ probabilities are modeled by Dirichlet posteriors.
 """
 
 
+import numpy as np
 import scipy.stats as stat
 from statrl.settings.markovdecisionprocess.discrete_nostructure.agent import MDPAgent
-from statrl.settings.utils import *
+from statrl.settings.utils import allmax, categorical_sample
 
 
 class PSRL(MDPAgent):
@@ -183,9 +184,18 @@ class PSRL(MDPAgent):
         # Transition kernel sampled from the posterior.
         self.p_sampled = np.zeros((self.nS, self.nA, self.nS))
 
-
-    # To reinitialize the learner with a given initial state inistate.
     def reset(self, inistate):
+        """Clear every statistic, restore the priors, and open the first episode.
+
+        Reward counts restart at ``Beta(1, 1)`` and transition pseudo-counts
+        at a flat ``Dirichlet(1, ..., 1)``, i.e. uniform priors, before an
+        initial model is sampled and solved.
+
+        Parameters
+        ----------
+        inistate : int
+            State the environment was reset to.
+        """
         self.t = 1
         self.observations = [[inistate], [], []]
         self.vk = np.zeros((self.nS, self.nA))
@@ -204,10 +214,25 @@ class PSRL(MDPAgent):
 
         self.new_episode()
 
-
-    # The Extend Value Iteration algorithm (approximated with precision epsilon), in parallel policy updated with the greedy one.
+  
     def VI(self, epsilon=0.01, max_iter=1000):
+        """ The Extend Value Iteration algorithm (approximated with precision epsilon), in parallel policy updated with the greedy one.
+        Solve the sampled MDP by average-reward value iteration.
 
+        Iterates the Bellman operator on the bias function until its span
+        contracts below ``epsilon``, and stores the greedy policy. Ties are
+        broken towards the least-visited action, which keeps exploration going
+        among actions the sampled model cannot separate.
+
+        Parameters
+        ----------
+        epsilon : float, default=0.01
+            Stopping threshold on the span of successive bias differences.
+        max_iter : float, default=1000
+            Iteration cap. On reaching it the current iterate is kept and a
+            non-convergence warning is printed, so the run continues with an
+            unconverged policy rather than failing.
+        """
         u0 = self.u - min(self.u)
         u1 = np.zeros(self.nS)
         itera = 0
@@ -219,9 +244,9 @@ class PSRL(MDPAgent):
                     # print("Support of ", s,a," : ", self.supports[s, a], ", ", support)
                     p = self.p_sampled[s, a]  # Allowed to sum  to <=1
                     # print("Max_p of ",s,a, " : ", max_p)
-                    temp[a] = self.r_sampled[s, a] + sum([u0[ns] * p[ns] for ns in range(self.nS)])
+                    temp[a] = self.r_sampled[s, a] + sum([u0[ns] * p[ns] for ns in range(self.nS)]) # Bellman update
 
-                # This implements a tie-breaking rule by choosing:  Uniform(Argmmin(Nk))
+                # This implements a tie-breaking rule among the greedy actions towards the least visited actions by choosing:  Uniform(Argmmin(Nk))
                 (u1[s], arg) = allmax(temp)
                 nn = [-self.Nk[s, a] for a in arg]
                 (nmax, arg2) = allmax(nn)
@@ -242,6 +267,17 @@ class PSRL(MDPAgent):
                 itera += 1
 
     def new_episode(self):
+        """Fold in the last episode's counts, sample a fresh MDP, and solve it.
+
+        Draws a reward mean per state-action pair from its Beta posterior and
+        a transition row from its Dirichlet posterior, then runs :meth:`VI` on
+        that sampled model. Sampling a *whole* MDP rather than perturbing each
+        pair independently is what makes the exploration coherent across
+        states — the policy commits to one plausible world for the episode.
+
+        The value-iteration precision tightens as ``1 / t``, so early episodes
+        are solved coarsely and later ones exactly.
+        """
         self.sumratios = 0.
         self.updateN()
 
@@ -256,9 +292,13 @@ class PSRL(MDPAgent):
         self.VI(epsilon=1. / max(1, self.t))
 
     ###### Steps and updates functions ######
-
-    # Auxiliary function to update N the current state-action count.
+ 
     def updateN(self):
+        """Auxiliary function to update N the current state-action count.
+
+        Adds ``vk`` into ``Nk``, refreshes the running maximum, and zeroes
+        ``vk`` for the next episode.
+        """
         self.Nkmax = 0.
         for s in range(self.nS):
             for a in range(self.nA):
@@ -266,17 +306,51 @@ class PSRL(MDPAgent):
                 self.Nkmax = max(self.Nkmax, self.Nk[s, a])
                 self.vk[s, a] = 0
 
-    # To chose an action for a given state (and start a new episode if necessary -> stopping criterion defined here).
+     
     def play(self, state):
+        """Sample an action from the current policy, starting an episode if due.
+
+        Parameters
+        ----------
+        state : int
+            Current state.
+
+        Returns
+        -------
+        int
+            The chosen action.
+
+        Notes
+        -----
+        The doubling stopping criterion ends an episode as soon as a
+        state-action pair has been visited as often within it as in all
+        previous episodes combined. This bounds the number of episodes
+        logarithmically, so the cost of resampling and re-solving the MDP
+        stays negligible against the horizon.
+        """
         action = categorical_sample([self.policy[state, a] for a in range(self.nA)], np.random)
         # if self.sumratios >= 1.:  # Stoppping criterion
         if self.vk[state, action] >= max([1, self.Nk[state, action]]):  # Stopping criterion
             self.new_episode()
             action = categorical_sample([self.policy[state, a] for a in range(self.nA)], np.random)
-        return action
-
-    # To update the learner after one step of the current policy.
+        return action 
+    
     def update(self, state, action, reward, observation):
+        """Update the learner (the Beta and Dirichlet posteriors) with one transition (one step of the current policy).
+
+        Parameters
+        ----------
+        state : int
+            State the action was taken in.
+        action : int
+            Action taken.
+        reward : float
+            Observed reward, treated as Bernoulli: it is added to the success
+            count and its complement to the failure count. Rewards outside
+            :math:`[0, 1]` therefore corrupt the posterior.
+        observation : int
+            State reached; increments that transition's pseudo-count.
+        """
         self.vk[state, action] += 1
         self.observations[0].append(observation)
         self.observations[1].append(action)

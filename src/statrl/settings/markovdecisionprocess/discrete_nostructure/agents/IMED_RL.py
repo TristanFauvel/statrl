@@ -244,6 +244,13 @@ class IMEDRL(MDPAgent):
         self.s = None
 
     def reset(self, state):
+        """Clear every statistic before a new independent run. 
+
+        Parameters
+        ----------
+        state : int
+            State the environment was reset to.
+        """
         self.state_action_pulls = np.zeros((self.nS, self.nA), dtype=int)
         self.state_visits = np.zeros(self.nS, dtype=int)
         self.rewards = np.zeros((self.nS, self.nA)) + 0.5
@@ -257,6 +264,14 @@ class IMEDRL(MDPAgent):
         self.s = state
 
     def value_iteration(self):
+        """ Runs average-reward value iteration over the empirical rewards and
+        transitions, restricted at each state to its skeleton (the actions
+        sampled often enough to be trusted).  
+        
+        Stops when successive iterates differ by less than ``epsilon``, or
+        after ``max_iteration`` sweeps. Updates ``phi`` in place, normalized
+        to have minimum zero.
+        """
         ctr = 0
         stop = False
         phi = np.copy(self.phi)
@@ -277,6 +292,24 @@ class IMEDRL(MDPAgent):
         self.phi = np.copy(phi)
 
     def update(self, state, action, reward, observation):
+        """Update the model and refresh the skeleton.
+
+        Updates the running reward mean and transition row for the pair, adds
+        the reward, and recomputes the
+        state's skeleton (the actions pulled at least :math:`\\log(N_{\\max})^2`
+        times).
+
+        Parameters
+        ----------
+        state : int
+            State the action was taken in.
+        action : int
+            Action taken.
+        reward : float
+            Observed reward.
+        observation : int
+            State reached; also becomes the agent's current state.
+        """
         na = self.state_action_pulls[state, action]
         ns = self.state_visits[state]
         r = self.rewards[state, action]
@@ -302,6 +335,23 @@ class IMEDRL(MDPAgent):
             self.all_selected[state] = np.all(self.state_action_pulls[state] > 0)
 
     def multinomial_imed(self, state):
+        """Compute the IMED-RL index of every action in a state.
+
+        The index is :math:`N_{s,a} K_{\\inf} + \\log N_{s,a}`, exactly the
+        bandit IMED form, but the divergence is taken over the joint
+        distribution of *reward plus bias of the next state* rather than the
+        reward alone. That joint view is what carries the MDP's long-run
+        structure into a bandit-style index.
+
+        Actions already achieving the best value get the degenerate index
+        :math:`\\log N_{s,a}`.
+
+        Parameters
+        ----------
+        state : int
+            State whose actions are indexed. Results are written to
+            ``self.index``.
+        """
         upper_bound = self.max_reward + np.max(self.phi)
         q = self.rewards[state] + self.transitions[state] @ self.phi
         mu = np.max(q)
@@ -329,7 +379,8 @@ class IMEDRL(MDPAgent):
 
                 delta = v - mu
 
-                h = lambda x: - np.sum(p * np.log(upper_bound - delta*x))
+                def h(x):
+                    return - np.sum(p * np.log(upper_bound - delta*x))
 
                 res = minimize_scalar(h, bounds=(0, u), method='bounded')
                 x = - res.fun
@@ -337,6 +388,20 @@ class IMEDRL(MDPAgent):
                 self.index[a] = n * x + np.log(n)
 
     def play(self, state):
+        """Choose an action: force-explore until every action is tried, then index.
+
+        Parameters
+        ----------
+        state : int
+            Current state.
+
+        Returns
+        -------
+        int
+            The least-pulled action while some action of this state has never
+            been taken, afterwards the minimal-index action, following a fresh
+            value iteration. 
+        """
         if not self.all_selected[state]:
             action = randmin(self.state_action_pulls[state])
         else:

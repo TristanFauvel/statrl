@@ -26,6 +26,26 @@ from statrl.settings.utils import categorical_sample, Dirac
 # Maze maps used to build grid-worlds MDPs:
 
 def randomMap(sizeX, sizeY, density, lengthofwalks, np_random=np.random):
+    """Generate a random maze by carving walls as short random walks.
+
+    Parameters
+    ----------
+    sizeX, sizeY : int
+        Grid dimensions.
+    density : float
+        Fraction of the grid to fill with walls.
+    lengthofwalks : int
+        Average length of each wall segment. Longer walks give fewer,
+        corridor-like walls; shorter ones give scattered obstacles.
+    np_random : numpy.random.Generator, default=numpy.random
+        Generator used for the draws. 
+
+    Returns
+    -------
+    ndarray of shape (sizeX, sizeY)
+        Map with ``1`` for a free cell and ``0`` for a wall; the border is
+        always wall.
+    """
     maze = np.ones((sizeX, sizeY))
     s = [np_random.integers(sizeX), np_random.integers(sizeY)]
     for i in range((int)(density * sizeX * sizeY)):
@@ -33,16 +53,36 @@ def randomMap(sizeX, sizeY, density, lengthofwalks, np_random=np.random):
         b = np_random.binomial(1, p)
         if (b == 0):
             next = np_random.integers(4)
-            if (next == 0):     s = [(s[0] + 1) % sizeX, s[1]]
-            if (next == 1):     s = [(s[0] - 1) % sizeX, s[1]]
-            if (next == 2):     s = [s[0], (s[1] + 1) % sizeY]
-            if (next == 3):     s = [s[0], (s[1] - 1) % sizeY]
+            if next == 0:
+                s = [(s[0] + 1) % sizeX, s[1]]
+            if next == 1:
+                s = [(s[0] - 1) % sizeX, s[1]]
+            if next == 2:
+                s = [s[0], (s[1] + 1) % sizeY]
+            if next == 3:
+                s = [s[0], (s[1] - 1) % sizeY]
         else:
             s = [np_random.integers(sizeX), np_random.integers(sizeY)]
         maze[s[0]][s[1]] = 0.
     return maze
 
 def fourRoomMap(X, Y):
+    """Build the classic four-room map.
+
+    Two perpendicular walls split the grid into four rooms joined by four
+    single-cell doorways. An agent has to find and pass
+    the narrow doorways.
+
+    Parameters
+    ----------
+    X, Y : int
+        Grid dimensions.
+
+    Returns
+    -------
+    ndarray of shape (X, Y)
+        Map with ``1`` for a free cell and ``0`` for a wall.
+    """
     Y2 = (int) (Y/2)
     X2 = (int) (X/2)
     maze = np.ones((X,Y))
@@ -61,6 +101,18 @@ def fourRoomMap(X, Y):
     return maze
 
 def twoRoomMap(X, Y):
+    """Build a two-room map: one dividing wall with a single doorway.
+
+    Parameters
+    ----------
+    X, Y : int
+        Grid dimensions.
+
+    Returns
+    -------
+    ndarray of shape (X, Y)
+        Map with ``1`` for a free cell and ``0`` for a wall.
+    """
     X2 = (int) (X/2)
     maze = np.ones((X,Y))
     for x in range(X):
@@ -75,14 +127,58 @@ def twoRoomMap(X, Y):
 
 
 class GridWorldWithWall(DiscreteMDP):
-    """
+    """Gridworld in which wall cells remain part of the state space.
 
+    Every cell is a state, walls included (but unreachable). Reaching a goal cell returns the agent to the initial distribution, making
+    the task continuing rather than episodic.
 
+    Parameters
+    ----------
+    sizeX, sizeY : int
+        Grid dimensions.
+    map_name : {'random', '2-room', '4-room'}, default='random'
+        Which map to build.
+    slippery : float, default=0.1
+        Transition noise, clipped to at most ``1/3``. ``0`` makes moves
+        deterministic; larger values spread mass over the other neighbours.
+    nbGoals : int, default=1
+        Number of goal cells to place.
+    rewardStd : float, default=0.0
+        Reward standard deviation. ``0`` gives deterministic
+        :class:`~statrl.settings.utils.Dirac` rewards; otherwise rewards are
+        truncated normal on :math:`[0, 1]`.
+    density : float, default=0.2
+        Wall density, for the random map only.
+    lengthofwalks : int, default=5
+        Average wall length, for the random map only.
+    initialSingleStateDistribution : bool, default=False
+        If True, start from one uniformly chosen non-goal cell; if False,
+        start uniformly over all non-goal cells.
+    start : array-like, optional
+        Explicit start cell ``[x, y]``, used when
+        ``initialSingleStateDistribution`` is True.
+    goal : array-like, optional
+        Explicit goal cell ``[x, y]``.
+    seed : int, optional
+        Seed for map generation and transitions.
+    name : str, default='GridWorldWithWall'
+        Label used in logfiles, plot titles, and dump filenames.
+
+    Attributes
+    ----------
+    maze : ndarray of shape (sizeX, sizeY)
+        ``0`` wall, ``1`` free, ``2`` goal.
+    nameActions : list of str
+        ``["Up", "Down", "Left", "Right"]``.
+
+    See Also
+    --------
+    GridWorld : The variant that removes wall cells from the state space.
     """
 
 #    metadata = {'render.modes': ['text', 'pylab', 'maze'], 'maps': ['random','2-room', '4-room']}
 
-    def __init__(self, sizeX,sizeY, map_name="random", slippery=0.1,nbGoals=1,rewardStd=0.,density=0.2, lengthofwalks=5, initialSingleStateDistribution=False,start=None, goal=None, seed=None,name="GridWorldWithWall"):
+    def __init__(self, sizeX,sizeY, map_name="random", slippery=0.1, nbGoals=1, rewardStd=0., density=0.2, lengthofwalks=5, initialSingleStateDistribution=False, start=None, goal=None, seed=None,name="GridWorldWithWall"):
         """
 
         :param sizeX: length of the 2-d grid
@@ -125,7 +221,7 @@ class GridWorldWithWall(DiscreteMDP):
 
 
 
-        if (goal != None):
+        if goal is not None:
             self.goalstates = self.makeGoalState(xy = goal)
         else:
             self.goalstates = self.makeGoalStates(nbGoals)
@@ -144,12 +240,49 @@ class GridWorldWithWall(DiscreteMDP):
         #self.rendermode='gw-text'
 
     def to_s(self,rowcol):
-            return rowcol[0] * self.sizeY + rowcol[1]
+        """Convert grid coordinates to a state index.
+
+        Parameters
+        ----------
+        rowcol : sequence of int
+            The ``(x, y)`` cell.
+
+        Returns
+        -------
+        int
+            The state index ``x * sizeY + y``.
+        """
+        return rowcol[0] * self.sizeY + rowcol[1]
 
     def from_s(self,s):
-            return s//self.sizeY, s%self.sizeY
+        """Convert a state index to grid coordinates.
+
+        Parameters
+        ----------
+        s : int
+            The state index.
+
+        Returns
+        -------
+        tuple of (int, int)
+            The ``(x, y)`` cell.
+        """
+        return s//self.sizeY, s%self.sizeY
 
     def makeGoalStates(self, nb):
+        """Place ``nb`` goal cells at random among the non-wall cells.
+
+        Parameters
+        ----------
+        nb : int
+            Number of goals to place.
+
+        Returns
+        -------
+        list of int
+            State indices of the goals. Marks each chosen cell ``2`` in
+            :attr:`maze`.
+        """
         goalstates = []
         for g in range(nb):
             s = [self.np_random.integers(self.sizeX), self.np_random.integers(self.sizeY)]
@@ -162,8 +295,21 @@ class GridWorldWithWall(DiscreteMDP):
 
 
     def makeGoalState(self, xy=None):
+        """Place a single goal cell, at a given or random free position.
+
+        Parameters
+        ----------
+        xy : sequence of int, optional
+            The ``(x, y)`` cell to use. If omitted, a free cell is drawn at
+            random.
+
+        Returns
+        -------
+        list of int
+            The goal's state index, in a one-element list.
+        """
         goalstates = []
-        if (xy == None):
+        if xy is None:
             xy = [np.random.integers(self.sizeX), np.random.integers(self.sizeY)]
             while (self.maze[xy[0]][xy[1]] != 1):
                 xy = [self.np_random.integers(self.sizeX), self.np_random.integers(self.sizeY)]
@@ -173,7 +319,22 @@ class GridWorldWithWall(DiscreteMDP):
 
 
     def makeInitialSingleStateDistribution(self, maze,xy=None):
-        if (xy==None):
+        """Build an initial distribution concentrated on one cell.
+
+        Parameters
+        ----------
+        maze : ndarray
+            The map. Accepted for signature symmetry; :attr:`maze` is used.
+        xy : sequence of int, optional
+            The ``(x, y)`` start cell. If omitted, a free cell is drawn at
+            random.
+
+        Returns
+        -------
+        ndarray of shape (nS,)
+            A Dirac at the chosen cell.
+        """
+        if xy is None:
             xy =[np.random.integers(self.sizeX), np.random.integers(self.sizeY)]
             while (self.maze[xy[0]][xy[1]] != 1):
                 xy = [self.np_random.integers(self.sizeX), self.np_random.integers(self.sizeY)]
@@ -183,46 +344,89 @@ class GridWorldWithWall(DiscreteMDP):
 
 
     def makeInitialDistribution(self,maze):
-         isd = np.array(maze == 1.).astype('float64').ravel()
-         isd /= isd.sum()
-         return isd
+        """Build an initial distribution uniform over the free cells.
+
+        Parameters
+        ----------
+        maze : ndarray
+            The map; cells equal to ``1`` are the free ones.
+
+        Returns
+        -------
+        ndarray of shape (nS,)
+            Uniform over free cells, zero on walls and goals.
+        """
+        isd = np.array(maze == 1.).astype('float64').ravel()
+        isd /= isd.sum()
+        return isd
 
     def makeTransition(self,initialstatedistribution):
-            X = self.sizeX
-            Y = self.sizeY
-            P = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
-            nbempty=0
+        """Build the transition kernel from the map and the slip model.
 
-            for s in range(self.nS):
-                x,y = self.from_s(s)
-                if (self.maze[x][y] == 2.):
-                    for a in range(self.nA):
-                        li = P[s][a]
-                        for ns in range(self.nS):
-                            if(initialstatedistribution[ns] > 0):
-                                li.append((initialstatedistribution[ns],ns,False))
-                else:
-                    us = [(x - 1) % X, y % Y]
-                    ds = [(x + 1) % X, y % Y]
-                    ls = [x % X, (y - 1) % Y]
-                    rs = [x % X, (y + 1) % Y]
-                    ss=[x,y]
-                    if (self.maze[us[0]][us[1]] <= 0 or self.maze[x][y] <= 0): us = ss
-                    if (self.maze[ds[0]][ds[1]] <= 0 or self.maze[x][y] <= 0): ds = ss
-                    if (self.maze[ls[0]][ls[1]] <= 0 or self.maze[x][y] <= 0): ls = ss
-                    if (self.maze[rs[0]][rs[1]] <= 0 or self.maze[x][y] <= 0): rs = ss
+        Each action puts most of its mass on the intended neighbour and the
+        rest on the others, as set by ``slippery``. A move into a wall or off
+        the grid leaves the agent in place. Goal cells transition back to the
+        initial distribution, which is what makes the task continuing.
 
-                    for a in range(self.nA):
-                        li = P[s][a]
-                        li.append((self.massmap[a][0],self.to_s(ls),False))
-                        li.append((self.massmap[a][1],self.to_s(us),False))
-                        li.append((self.massmap[a][2],self.to_s(rs),False))
-                        li.append((self.massmap[a][3],self.to_s(ds),False))
-                        li.append((self.massmap[a][4],self.to_s(ss),False))
+        Parameters
+        ----------
+        initialstatedistribution : ndarray of shape (nS,)
+            Distribution the agent is returned to from a goal cell.
 
-            return P
+        Returns
+        -------
+        dict
+            Kernel in
+            :class:`~statrl.settings.markovdecisionprocess.discrete_nostructure.environment.DiscreteMDP`
+            form, ``P[s][a] == [(probability, nextstate, done), ...]``.
+        """
+        X = self.sizeX
+        Y = self.sizeY
+        P = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
+
+        for s in range(self.nS):
+            x,y = self.from_s(s)
+            if (self.maze[x][y] == 2.):
+                for a in range(self.nA):
+                    li = P[s][a]
+                    for ns in range(self.nS):
+                        if(initialstatedistribution[ns] > 0):
+                            li.append((initialstatedistribution[ns],ns,False))
+            else:
+                us = [(x - 1) % X, y % Y]
+                ds = [(x + 1) % X, y % Y]
+                ls = [x % X, (y - 1) % Y]
+                rs = [x % X, (y + 1) % Y]
+                ss=[x,y]
+                if self.maze[us[0]][us[1]] <= 0 or self.maze[x][y] <= 0:
+                    us = ss
+                if self.maze[ds[0]][ds[1]] <= 0 or self.maze[x][y] <= 0:
+                    ds = ss
+                if self.maze[ls[0]][ls[1]] <= 0 or self.maze[x][y] <= 0:
+                    ls = ss
+                if self.maze[rs[0]][rs[1]] <= 0 or self.maze[x][y] <= 0:
+                    rs = ss
+
+                for a in range(self.nA):
+                    li = P[s][a]
+                    li.append((self.massmap[a][0],self.to_s(ls),False))
+                    li.append((self.massmap[a][1],self.to_s(us),False))
+                    li.append((self.massmap[a][2],self.to_s(rs),False))
+                    li.append((self.massmap[a][3],self.to_s(ds),False))
+                    li.append((self.massmap[a][4],self.to_s(ss),False))
+
+        return P
 
     def makeRewards(self):
+        """Build the reward function: ``0.99`` at goal cells, ``0`` elsewhere.
+
+        Returns
+        -------
+        dict
+            ``R[s][a]`` per state-action pair —
+            :class:`~statrl.settings.utils.Dirac` when ``rewardStd`` is zero,
+            otherwise a truncated normal on :math:`[0, 1]`.
+        """
         R = {s: {a: Dirac(0.) for a in range(self.nA)} for s in range(self.nS)}
 
         for s in range(self.nS):
@@ -238,6 +442,20 @@ class GridWorldWithWall(DiscreteMDP):
         return R
 
     def getTransition(self,s,a):
+        """Transition distribution of a state-action pair, as a dense vector.
+
+        Parameters
+        ----------
+        s : int
+            The state.
+        a : int
+            The action.
+
+        Returns
+        -------
+        ndarray of shape (nS,)
+            Probability of reaching each state.
+        """
         transition = np.zeros(self.nS)
         for c in self.P[s][a]:
             transition[c[1]]=c[0]
@@ -247,6 +465,60 @@ class GridWorldWithWall(DiscreteMDP):
 
 # Upgrade of the previous class, walls are no longer visible as unaccessible states for the learner (they're no longer existing for the learner).
 class GridWorld(DiscreteMDP):
+    """Gridworld whose state space contains only the reachable cells.
+
+    Refines :class:`GridWorldWithWall` by dropping wall cells entirely, so
+    ``nS`` counts free cells alone. Two lookup tables bridge the two indexings:
+    ``mapping`` sends a state to its grid cell and ``revmapping`` back.  
+
+    Parameters
+    ----------
+    sizeX, sizeY : int
+        Grid dimensions.
+    map_name : {'random', '2-room', '4-room'}, default='random'
+        Which map to build.
+    slippery : float, default=0.1
+        Transition noise, clipped to at most ``1/3``. ``0`` makes moves
+        deterministic; larger values spread mass over the other neighbours.
+    nbGoals : int, default=1
+        Number of goal cells to place.
+    rewardStd : float, default=0.0
+        Reward standard deviation. ``0`` gives deterministic
+        :class:`~statrl.settings.utils.Dirac` rewards; otherwise rewards are
+        truncated normal on :math:`[0, 1]`.
+    density : float, default=0.2
+        Wall density, for the random map only.
+    lengthofwalks : int, default=5
+        Average wall length, for the random map only.
+    initialSingleStateDistribution : bool, default=False
+        If True, start from one uniformly chosen non-goal cell; if False,
+        start uniformly over all non-goal cells.
+    start : array-like, optional
+        Explicit start cell ``[x, y]``, used when
+        ``initialSingleStateDistribution`` is True.
+    goal : array-like, optional
+        Explicit goal cell ``[x, y]``.
+    seed : int, optional
+        Seed for map generation and transitions.
+    name : str, default='GridWorld'
+        Label used in logfiles, plot titles, and dump filenames.
+
+    Attributes
+    ----------
+    maze : ndarray of shape (sizeX, sizeY)
+        ``0`` wall, ``1`` free, ``2`` goal.
+    mapping : ndarray
+        State index to flat grid index.
+    revmapping : ndarray
+        Flat grid index to state index.
+    nS_all : int
+        Total number of grid cells, walls included, as opposed to ``nS``.
+
+    See Also
+    --------
+    GridWorldWithWall : The variant that keeps wall cells as states.
+    """
+
  #   metadata = {'render.modes': ['text', 'ansi', 'pylab', 'maze'], 'maps': ['random', '2-room', '4-room']}
 
     def __init__(self, sizeX, sizeY, map_name="random", slippery=0.1, nbGoals=1, rewardStd=0., density=0.2,
@@ -311,7 +583,7 @@ class GridWorld(DiscreteMDP):
 
         self.action_space = spaces.Discrete(self.nA)
         self.observation_space = spaces.Discrete(self.nS)
-        if (goal != None):
+        if goal is not None:
             self.goalstates = self.makeGoalState(xy = goal)
         #if (map_name == "2-room"):
         #    self.goalstates = self.makeGoalState(xy = [sizeX - 2, sizeY - 2])
@@ -334,12 +606,58 @@ class GridWorld(DiscreteMDP):
         #self.rendermode = 'gw-text'
 
     def to_s(self, rowcol):
+        """Convert grid coordinates to a *flat grid* index.
+
+        Parameters
+        ----------
+        rowcol : sequence of int
+            The ``(x, y)`` cell.
+
+        Returns
+        -------
+        int
+            The flat grid index ``x * sizeY + y``. This is not a state index:
+            pass it through :attr:`revmapping` for that.
+        """
         return rowcol[0] * self.sizeY + rowcol[1]
 
     def from_s(self, s):
+        """Convert a flat grid index to grid coordinates.
+
+        Parameters
+        ----------
+        s : int
+            The flat grid index, e.g. ``mapping[state]``.
+
+        Returns
+        -------
+        tuple of (int, int)
+            The ``(x, y)`` cell.
+        """
         return s // self.sizeY, s % self.sizeY
 
     def step(self, a):
+        """Take an action: draw the next state and a reward.
+
+        Parameters
+        ----------
+        a : int
+            Action to take in the current state.
+
+        Returns
+        -------
+        state : int
+            The new state.
+        reward : float
+            Reward drawn from ``R[s][a]``.
+        done : bool
+            Whether the transition was terminal.
+        truncated : bool
+            Always False.
+        info : dict
+            ``{"mean": float}``, the pair's mean reward. For regret accounting
+            only; must not be given to the learner.
+        """
         transitions = self.P[self.s][a]
         rewarddis = self.R[self.s][a]
         i = categorical_sample([t[0] for t in transitions], self.np_random)
@@ -352,10 +670,38 @@ class GridWorld(DiscreteMDP):
         return s, r, d,False, {"mean":m}
 
     def seed(self, seed=None):
+        """Reseed the environment's generator.
+
+        Parameters
+        ----------
+        seed : int, optional
+            Seed to use. ``None`` draws a fresh one.
+
+        Returns
+        -------
+        list of int
+            The seed actually used, in a one-element list.
+        """
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
     def reset(self, seed=None, options=None):
+        """Start a new episode by drawing a state from the initial distribution.
+
+        Parameters
+        ----------
+        seed : int, optional
+            Seed for the environment's generator.
+        options : dict, optional
+            Unused; accepted for :class:`gymnasium.Env` compatibility.
+
+        Returns
+        -------
+        state : int
+            The initial state.
+        info : dict
+            ``{"mean": 0}``.
+        """
         super().reset(seed=seed, options=options)
         self.np_random, seed = seeding.np_random(seed)
         self.s = categorical_sample(self.isd, self.np_random)
@@ -363,6 +709,19 @@ class GridWorld(DiscreteMDP):
         return self.s, {"mean":0}
 
     def makeGoalStates(self, nb):
+        """Place ``nb`` goal cells at random among the non-wall cells.
+
+        Parameters
+        ----------
+        nb : int
+            Number of goals to place.
+
+        Returns
+        -------
+        list of int
+            State indices of the goals, translated through
+            :attr:`revmapping`.
+        """
         goalstates = []
         for g in range(nb):
             s = [self.np_random.integers(self.sizeX), self.np_random.integers(self.sizeY)]
@@ -374,8 +733,21 @@ class GridWorld(DiscreteMDP):
 
 
     def makeGoalState(self, xy=None):
+        """Place a single goal cell, at a given or random free position.
+
+        Parameters
+        ----------
+        xy : sequence of int, optional
+            The ``(x, y)`` cell to use. If omitted, a free cell is drawn at
+            random.
+
+        Returns
+        -------
+        list of int
+            The goal's state index, in a one-element list.
+        """
         goalstates = []
-        if (xy == None):
+        if xy is None:
             xy = [np.random.integers(self.sizeX), np.random.integers(self.sizeY)]
             while (self.maze[xy[0]][xy[1]] != 1):
                 xy = [self.np_random.integers(self.sizeX), self.np_random.integers(self.sizeY)]
@@ -384,7 +756,22 @@ class GridWorld(DiscreteMDP):
         return goalstates
 
     def makeInitialSingleStateDistribution(self, maze,xy=None):
-        if (xy==None):
+        """Build an initial distribution concentrated on one cell.
+
+        Parameters
+        ----------
+        maze : ndarray
+            The map. Accepted for signature symmetry; :attr:`maze` is used.
+        xy : sequence of int, optional
+            The ``(x, y)`` start cell. If omitted, a free cell is drawn at
+            random.
+
+        Returns
+        -------
+        ndarray of shape (nS,)
+            A Dirac at the chosen cell.
+        """
+        if xy is None:
             xy =[np.random.integers(self.sizeX), np.random.integers(self.sizeY)]
             while (self.maze[xy[0]][xy[1]] != 1):
                 xy = [self.np_random.integers(self.sizeX), self.np_random.integers(self.sizeY)]
@@ -393,6 +780,19 @@ class GridWorld(DiscreteMDP):
         return isd
 
     def makeInitialDistribution(self, maze):
+        """Build an initial distribution uniform over the non-goal states.
+
+        Parameters
+        ----------
+        maze : ndarray
+            The map. Accepted for signature symmetry; the goal states are read
+            from :attr:`goalstates` instead.
+
+        Returns
+        -------
+        ndarray of shape (nS,)
+            Uniform over non-goal states.
+        """
         isd = np.ones(self.nS)
         for g in self.goalstates:
             isd[g] = 0
@@ -401,6 +801,25 @@ class GridWorld(DiscreteMDP):
         return isd
 
     def makeTransition(self, initialstatedistribution):
+        """Build the transition kernel from the map and the slip model.
+
+        Each action puts most of its mass on the intended neighbour and the
+        rest on the others, as set by ``slippery``. A move into a wall or off
+        the grid leaves the agent in place. Goal cells transition back to the
+        initial distribution, which is what makes the task continuing.
+
+        Parameters
+        ----------
+        initialstatedistribution : ndarray of shape (nS,)
+            Distribution the agent is returned to from a goal cell.
+
+        Returns
+        -------
+        dict
+            Kernel in
+            :class:`~statrl.settings.markovdecisionprocess.discrete_nostructure.environment.DiscreteMDP`
+            form, ``P[s][a] == [(probability, nextstate, done), ...]``.
+        """
         X = self.sizeX
         Y = self.sizeY
         P = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
@@ -419,10 +838,14 @@ class GridWorld(DiscreteMDP):
                 ls = [x % X, (y - 1) % Y]
                 rs = [x % X, (y + 1) % Y]
                 ss = [x, y]
-                if (self.maze[us[0]][us[1]] <= 0 or self.maze[x][y] <= 0): us = ss
-                if (self.maze[ds[0]][ds[1]] <= 0 or self.maze[x][y] <= 0): ds = ss
-                if (self.maze[ls[0]][ls[1]] <= 0 or self.maze[x][y] <= 0): ls = ss
-                if (self.maze[rs[0]][rs[1]] <= 0 or self.maze[x][y] <= 0): rs = ss
+                if self.maze[us[0]][us[1]] <= 0 or self.maze[x][y] <= 0:
+                    us = ss
+                if self.maze[ds[0]][ds[1]] <= 0 or self.maze[x][y] <= 0:
+                    ds = ss
+                if self.maze[ls[0]][ls[1]] <= 0 or self.maze[x][y] <= 0:
+                    ls = ss
+                if self.maze[rs[0]][rs[1]] <= 0 or self.maze[x][y] <= 0:
+                    rs = ss
                 for a in range(self.nA):
                     li = P[s][a]
                     li.append((self.massmap[a][0], self.revmapping[self.to_s(ls)], False))
@@ -435,6 +858,15 @@ class GridWorld(DiscreteMDP):
 
 
     def makeRewards(self):
+        """Build the reward function: ``0.99`` at goal cells, ``0`` elsewhere.
+
+        Returns
+        -------
+        dict
+            ``R[s][a]`` per state-action pair —
+            :class:`~statrl.settings.utils.Dirac` when ``rewardStd`` is zero,
+            otherwise a truncated normal on :math:`[0, 1]`.
+        """
         R = {s: {a: Dirac(0.) for a in range(self.nA)} for s in range(self.nS)}
 
         for s in range(self.nS):
@@ -450,6 +882,21 @@ class GridWorld(DiscreteMDP):
         return R
 
     def getTransition(self, s, a):
+        """Transition distribution of a state-action pair, as a dense vector.
+
+        Parameters
+        ----------
+        s : int
+            The state.
+        a : int
+            The action.
+
+        Returns
+        -------
+        ndarray of shape (nS,)
+            Probability of reaching each state. Duplicate successors are
+            summed, since a cell may be reachable by several slips.
+        """
         transition = np.zeros(self.nS)
         for c in self.P[s][a]:
             p,ss,isA = c

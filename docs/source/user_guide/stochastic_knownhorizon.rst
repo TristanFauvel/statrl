@@ -18,8 +18,9 @@ The environment
 ---------------
 
 :class:`~statrl.settings.bandits.stochastic.knownhorizon.environment.StochasticBanditEnv`
-mirrors the anytime environment — arms with reward distributions, ``n_arms``, ``means``,
-``pull(arm)`` — the difference is entirely on the agent side.
+is the anytime environment, re-exported unchanged: knowing the horizon changes what
+the *agent* may do, not what the problem is. Any environment built for the anytime
+setting therefore works here as is.
 
 Bridging to the anytime setting
 -------------------------------
@@ -50,6 +51,6 @@ loops of the other without reimplementing it.
 The interaction loop
 --------------------
 
-:func:`~statrl.settings.bandits.stochastic.knownhorizon.interaction.interact` runs the same
+:class:`~statrl.settings.bandits.stochastic.knownhorizon.interaction.BanditInteraction` runs the same
 ``select_arm`` → ``pull`` → ``update`` cycle for ``horizon`` rounds and returns the
 cumulative-score array.

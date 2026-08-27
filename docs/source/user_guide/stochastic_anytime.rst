@@ -16,9 +16,12 @@ abstract, *stateless* multi-armed bandit environment — interactions never modi
 underlying distributions. A subclass supplies the arms' reward distributions and
 implements:
 
-- ``n_arms`` — number of arms,
+- ``number_arms`` — number of arms,
 - ``means`` — the true mean of each arm (used for evaluation and to build an oracle), and
-- ``pull(arm)`` — draw one reward from the given arm.
+- ``step(arm)`` — draw one reward from the given arm.
+
+Unlike :meth:`gymnasium.Env.step` this returns the reward alone rather than a
+five-tuple: a bandit has no observable state.
 
 It also derives ``optimal_mean`` and ``optimal_arm`` from ``means``, and supports seeding
 and rendering via ``gymnasium`` utilities.
@@ -50,9 +53,11 @@ Shipped agents
 The interaction loop
 --------------------
 
-:func:`~statrl.settings.bandits.stochastic.anytime.interaction.interact` resets the
-environment and learner, then repeats ``select_arm`` → ``pull`` → ``update`` for
-``horizon`` rounds, accumulating the reward into a running score it returns as an array.
+:class:`~statrl.settings.bandits.stochastic.anytime.interaction.BanditInteraction`
+resets the environment and learner, then repeats ``select_arm`` → ``step`` →
+``update`` for ``horizon`` rounds, accumulating the arms' *expected* rewards into a
+running score it returns as an array. Call it as ``BanditInteraction().run(env,
+learner, horizon)``; ``renderrun`` runs the same loop while printing each pull.
 
 IMED in depth
 -------------

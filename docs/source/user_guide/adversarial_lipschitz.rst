@@ -29,16 +29,16 @@ The agent
 ---------
 
 The base :class:`~statrl.settings.bandits.adversarial.lipschitz.agent.Agent` defines
-``play(observation)`` (return an action) and an optional ``update(action, reward,
-observation=None)``.
+``select_arm(observation)`` (return an action) and an optional ``update(action,
+reward, observation=None)``.
 
 ALF — Adversarial Lipschitz Forecaster
 --------------------------------------
 
 :class:`~statrl.settings.bandits.adversarial.lipschitz.agents.ALF.ALFLearner` reduces the
 continuous problem to a finite one: it builds an **ε-net** (a discrete cover) of the action
-space, then runs an exponential-weights / Hedge update over those points. Constructor
-parameters:
+space, then runs an exponential-weights / Hedge update over those points
+[Maillard2010]_. Constructor parameters:
 
 - ``epsilon`` — discretization resolution of the cover,
 - ``eta`` — learning rate for the exponential weights,
