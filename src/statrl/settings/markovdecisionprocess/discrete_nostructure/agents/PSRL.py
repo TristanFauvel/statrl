@@ -243,14 +243,8 @@ class PSRL(MDPAgent):
                     # print("Support of ", s,a," : ", self.supports[s, a], ", ", support)
                     p = self.p_sampled[s, a]  # Allowed to sum  to <=1
                     # print("Max_p of ",s,a, " : ", max_p)
-                    temp[a] = self.r_sampled[s, a] + sum([u0[ns] * p[ns] for ns in range(self.nS)]) # Bellman update
-
-                # This implements a tie-breaking rule among the greedy actions towards the least visited actions by choosing:  Uniform(Argmmin(Nk))
-                (u1[s], arg) = allmax(temp)
-                nn = [-self.Nk[s, a] for a in arg]
-                (nmax, arg2) = allmax(nn)
-                choice = [arg[a] for a in arg2]
-                self.policy[s] = [1. / len(choice) if x in choice else 0 for x in range(self.nA)]
+                    temp[a] = self.r_sampled[s, a] + sum([u0[ns] * p[ns] for ns in range(self.nS)])
+                u1[s] = max(temp)
 
             diff = [x - y for (x, y) in zip(u1, u0)]
             if (max(diff) - min(diff)) < epsilon:
@@ -261,6 +255,19 @@ class PSRL(MDPAgent):
             print("[PSRL] No convergence in the VI at time ", self.t, " before ", max_iter, " iterations.")
 
         self.u = u1 - min(u1)
+
+        # Greedy policy w.r.t. the converged bias function, tie-breaking by
+        # choosing: Uniform(Argmin(Nk)) among the greedy actions.
+        for s in range(self.nS):
+            temp = np.zeros(self.nA)
+            for a in range(self.nA):
+                p = self.p_sampled[s, a]
+                temp[a] = self.r_sampled[s, a] + sum([self.u[ns] * p[ns] for ns in range(self.nS)])
+            (_, arg) = allmax(temp)
+            nn = [-self.Nk[s, a] for a in arg]
+            (_, arg2) = allmax(nn)
+            choice = [arg[a] for a in arg2]
+            self.policy[s] = [1. / len(choice) if x in choice else 0 for x in range(self.nA)]
 
     def new_episode(self):
         """Fold in the last episode's counts, sample a fresh MDP, and solve it.
