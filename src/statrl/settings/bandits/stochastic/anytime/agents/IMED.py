@@ -2,8 +2,7 @@ from typing import Callable
 
 import numpy as np
 from statrl.settings.bandits.stochastic.anytime.agent import BanditAgent
-from statrl.settings.utils import randmin, klGauss
-from math import log
+from statrl.settings.utils import klBern, klGauss, randmin
 
 
 class IMED(BanditAgent):
@@ -148,9 +147,20 @@ class IMED(BanditAgent):
         # Best empirical mean across arms
         self.maxMeans = float(np.max(self.means))
 
-        # IMED index computation
-        self.indexes = np.array([
-            (self.nbDraws[a] * self.kl(self.means[a], self.maxMeans)
-             + log(self.nbDraws[a])) if self.nbDraws[a] > 0 else 0
-            for a in range(self.nA)
-        ])
+        selected = self.nbDraws > 0 # Identify arms that have been pulled
+        means = self.means[selected]
+        draws = self.nbDraws[selected]
+
+        if self.kl is klBern:
+            divergences = klBern(means, self.maxMeans)
+        elif self.kl is klGauss:
+            divergences = (means - self.maxMeans) ** 2 / 2
+        else:
+            divergences = np.array([
+                self.kl(mean, self.maxMeans)
+                for mean in means
+            ])
+
+        indexes = np.zeros(self.nA)
+        indexes[selected] = draws * divergences + np.log(draws)
+        self.indexes = indexes
