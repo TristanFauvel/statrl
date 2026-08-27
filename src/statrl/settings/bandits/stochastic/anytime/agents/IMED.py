@@ -124,12 +124,12 @@ class IMED(BanditAgent):
         return randmin(self.indexes)
 
     def update(self, arm: int, reward: float) -> None:
-        """Refresh the empirical means and recompute every index.
+        """Refresh the empirical means and all affected indices.
 
         Increments the pull count and cumulative reward of ``arm``, updates
-        its empirical mean and the running best mean, then recomputes
-        :math:`I_a(t)` for all arms — all of them, because they share
-        :math:`\\hat{\\mu}^\\star(t)`.
+        its empirical mean and the running best mean. If the best mean changes,
+        every index is recomputed, otherwise only the pulled arm's index
+        can have changed.
 
         Parameters
         ----------
@@ -138,6 +138,7 @@ class IMED(BanditAgent):
         reward : float
             Reward observed for that arm.
         """
+        previous_max = self.maxMeans
         self.cumRewards[arm] += reward
         self.nbDraws[arm] += 1
 
@@ -146,6 +147,14 @@ class IMED(BanditAgent):
 
         # Best empirical mean across arms
         self.maxMeans = float(np.max(self.means))
+
+        if self.maxMeans == previous_max:
+            draws = self.nbDraws[arm]
+            self.indexes[arm] = (
+                draws * self.kl(self.means[arm], self.maxMeans)
+                + np.log(draws)
+            )
+            return
 
         selected = self.nbDraws > 0 # Identify arms that have been pulled
         means = self.means[selected]
