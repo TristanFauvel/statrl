@@ -146,7 +146,7 @@ class IMED(BanditAgent):
         self.means[arm] = self.cumRewards[arm] / self.nbDraws[arm]
 
         # Best empirical mean across arms
-        self.maxMeans = np.max(self.means)
+        self.maxMeans = float(np.max(self.means))
 
         # IMED index computation
         self.indexes = np.array([
