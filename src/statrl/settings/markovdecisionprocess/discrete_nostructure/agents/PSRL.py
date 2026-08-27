@@ -236,14 +236,11 @@ class PSRL(MDPAgent):
 
         for _ in range(max_iter):
             for s in range(self.nS):
-                temp = np.zeros(self.nA)
-                for a in range(self.nA):
-                    p = self.p_sampled[s, a]
-                    temp[a] = self.r_sampled[s, a] + sum([u0[ns] * p[ns] for ns in range(self.nS)])
-                u1[s] = max(temp)
+                temp = self.r_sampled[s] + self.p_sampled[s] @ u0
+                u1[s] = np.max(temp)
 
-            diff = [x - y for (x, y) in zip(u1, u0)]
-            if (max(diff) - min(diff)) < epsilon:
+            diff = u1 - u0
+            if max(diff) - min(diff) < epsilon:
                 break
             u0 = u1 - min(u1)
             u1 = np.zeros(self.nS)
@@ -255,10 +252,7 @@ class PSRL(MDPAgent):
         # Greedy policy w.r.t. the converged bias function, tie-breaking by
         # choosing: Uniform(Argmin(Nk)) among the greedy actions.
         for s in range(self.nS):
-            temp = np.zeros(self.nA)
-            for a in range(self.nA):
-                p = self.p_sampled[s, a]
-                temp[a] = self.r_sampled[s, a] + sum([self.u[ns] * p[ns] for ns in range(self.nS)])
+            temp = self.r_sampled[s] + self.p_sampled[s] @ self.u
             (_, arg) = allmax(temp)
             nn = [-self.Nk[s, a] for a in arg]
             (_, arg2) = allmax(nn)
