@@ -26,7 +26,7 @@ probabilities are modeled by Dirichlet posteriors.
 import numpy as np
 import scipy.stats as stat
 from statrl.settings.markovdecisionprocess.discrete_nostructure.agent import MDPAgent
-from statrl.settings.utils import allmax, categorical_sample
+from statrl.settings.utils import categorical_sample
 
 
 class PSRL(MDPAgent):
@@ -234,36 +234,30 @@ class PSRL(MDPAgent):
             unconverged policy rather than failing.
         """
         u0 = self.u - min(self.u)
-        u1 = np.zeros(self.nS)
         itera = 0
 
         while True:
+            action_values = self.r_sampled + self.p_sampled @ u0
+            u1 = np.max(action_values, axis=1)
+
             for s in range(self.nS):
-                temp = np.zeros(self.nA)
-                for a in range(self.nA):
-                    # print("Support of ", s,a," : ", self.supports[s, a], ", ", support)
-                    p = self.p_sampled[s, a]  # Allowed to sum  to <=1
-                    # print("Max_p of ",s,a, " : ", max_p)
-                    temp[a] = self.r_sampled[s, a] + sum([u0[ns] * p[ns] for ns in range(self.nS)]) # Bellman update
-
                 # This implements a tie-breaking rule among the greedy actions towards the least visited actions by choosing:  Uniform(Argmmin(Nk))
-                (u1[s], arg) = allmax(temp)
-                nn = [-self.Nk[s, a] for a in arg]
-                (nmax, arg2) = allmax(nn)
-                choice = [arg[a] for a in arg2]
-                self.policy[s] = [1. / len(choice) if x in choice else 0 for x in range(self.nA)]
+                greedy_actions = np.flatnonzero(action_values[s] == u1[s])
+                greedy_counts = self.Nk[s, greedy_actions]
+                choice = greedy_actions[greedy_counts == np.min(greedy_counts)]
+                self.policy[s] = 0.0
+                self.policy[s, choice] = 1.0 / len(choice)
 
-            diff = [abs(x - y) for (x, y) in zip(u1, u0)]
-            if (max(diff) - min(diff)) < epsilon:
-                self.u = u1 - min(u1)
+            diff = np.abs(u1 - u0)
+            if np.ptp(diff) < epsilon:
+                self.u = u1 - np.min(u1)
                 break
             elif itera > max_iter:
-                self.u = u1 - min(u1)
+                self.u = u1 - np.min(u1)
                 print("[PSRL] No convergence in the VI at time ", self.t, " before ", max_iter, " iterations.")
                 break
             else:
-                u0 = u1 - min(u1)
-                u1 = np.zeros(self.nS)
+                u0 = u1 - np.min(u1)
                 itera += 1
 
     def new_episode(self):
@@ -363,6 +357,5 @@ class PSRL(MDPAgent):
         self.p_pseudoCounts[state,action,observation] +=1
 
         self.t += 1
-
 
 
