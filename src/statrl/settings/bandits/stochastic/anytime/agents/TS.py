@@ -47,7 +47,7 @@ class TS(BanditAgent):
             Number of arms.
         """
         self.nA = nbArms
-        if name==None:
+        if name is None:
             BanditAgent.__init__(self, name="TS")
         else:
             BanditAgent.__init__(self, name=name)

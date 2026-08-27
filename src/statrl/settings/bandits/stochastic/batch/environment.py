@@ -53,6 +53,9 @@ class BatchMAB(MAB):
         self.name = "B"+self.mab.name+"-batch-"+str(self.batchsize(0))+"-"+str(self.batchsize(1))+"-"+str(self.batchsize(2))
         self.round = 0
         super(BatchMAB, self).__init__(self.mab.rewarddistributions, name=self.name)
+        # A batch's "last" is a (arms, rewards) pair of lists, unlike the single
+        # (arm, reward) pair used by the unbatched MAB this class wraps.
+        self.last: tuple[Optional[list], Optional[list]] = (None, None)  # type: ignore[assignment]
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None) -> dict:  # type: ignore[override]
         """Start a new run and announce the size of the first batch.

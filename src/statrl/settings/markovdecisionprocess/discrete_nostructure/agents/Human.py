@@ -1,3 +1,6 @@
+from statrl.settings.markovdecisionprocess.discrete_nostructure.agent import MDPAgent
+
+
 def keyboard_waitfor(list):
     """Block on stdin until the user types one of the allowed strings.
 
@@ -17,7 +20,7 @@ def keyboard_waitfor(list):
             i = list.index(x)
             return x,i
 
-from statrl.settings.markovdecisionprocess.discrete_nostructure.agent import MDPAgent
+
 class Human(MDPAgent):
     """Interactive agent that asks the user for each action.
 

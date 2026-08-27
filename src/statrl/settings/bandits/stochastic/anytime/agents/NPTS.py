@@ -3,7 +3,6 @@ import numpy as np
 
 from statrl.settings.bandits.stochastic.anytime.agent import BanditAgent
 from statrl.settings.utils import randmax
-from math import sqrt, log
 
 class NPTS(BanditAgent):
     """
@@ -47,7 +46,7 @@ class NPTS(BanditAgent):
         """
         self.nA=nbArms
         self.bound = bound
-        if name==None:
+        if name is None:
             BanditAgent.__init__(self, name="NPTS")
         else:
             BanditAgent.__init__(self, name=name)

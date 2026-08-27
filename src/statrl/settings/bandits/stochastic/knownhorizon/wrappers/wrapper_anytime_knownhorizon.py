@@ -140,4 +140,4 @@ class KnownHorizonToAnytimeAgentWrapper(
         AttributeError
             If the wrapped agent has no ``policy``; only oracles define one.
         """
-        return self.learner.policy   
+        return self.learner.policy  # type: ignore[attr-defined]  # only oracle agents define this

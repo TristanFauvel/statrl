@@ -65,4 +65,5 @@ class Textrenderer():
 
         actionNames = self._nameActions(env)
         if lastaction is not None:
-            self.outfile.write(f"({actionNames[lastaction % 26] + ("'" * int(lastaction % 26))})\tr={lastreward:0.2f}\n")
+            suffix = "'" * int(lastaction % 26)
+            self.outfile.write(f"({actionNames[lastaction % 26] + suffix})\tr={lastreward:0.2f}\n")

@@ -1,6 +1,5 @@
 
 import sys
-from six import StringIO
 from gymnasium import utils
 import string
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import numpy as np
 
 from statrl.settings.bandits.stochastic.kernel.environment import KernelBanditEnv
@@ -91,7 +93,6 @@ kernel_dictionary = {"RBFKernel": RBFKernel, "Matern32Kernel": Matern32Kernel, "
 # ---------------------------------------------------------------------------
 # Kernel bandit constructor
 # ---------------------------------------------------------------------------
-from collections.abc import Sequence
 
 def KernelBandit(
     nb_arms: int | Sequence[int],

@@ -7,7 +7,7 @@ from statrl.settings.markovdecisionprocess.gridworld.environment import Discrete
 from statrl.settings.markovdecisionprocess.gridworld.agent import  MDPAgent
 
 
-from statrl.settings.markovdecisionprocess.gridworld.renderers.textRenderer import GridworldRenderer,GridworldWithWallRenderer
+from statrl.settings.markovdecisionprocess.gridworld.renderers.textRenderer import GridworldRenderer
 
 from statrl.experiments.onerun import Interaction
 

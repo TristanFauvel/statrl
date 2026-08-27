@@ -21,8 +21,8 @@ Usage
 import math
 import numpy as np
 from statrl.settings.bandits.stochastic.batch.agent import BatchBanditAgent
-from statrl.settings.bandits.stochastic.batch.agents.baba_schedule import g_baba
-from statrl.settings.utils import randmin,randmax
+from statrl.settings.bandits.stochastic.batch.agents.baba_schedule import compute_baba_grid, g_baba
+from statrl.settings.utils import randmax
 
 # ---------------------------------------------------------------------------
 # KL utilities
@@ -52,7 +52,6 @@ def _kl_plus(mu: float, mu_star: float, kl_fn) -> float:
 # Main class
 # ---------------------------------------------------------------------------
 
-from statrl.settings.bandits.stochastic.batch.agents.baba_schedule import compute_baba_grid
 class BABA(BatchBanditAgent):
     """Batched Anytime Bandit Algorithm
     BABA divides the run into *epochs*, each split into five phases with a
@@ -112,7 +111,7 @@ class BABA(BatchBanditAgent):
         self._variance    = variance
         self.T_target = horizon
 
-        if (self._phases == None):
+        if self._phases is None:
             _,  self._phases, self._epoch_ids, self._epoch_I = compute_baba_grid(
                 self.T_target,  self.nbArms, None, alpha=3)
 
@@ -198,11 +197,16 @@ class BABA(BatchBanditAgent):
         phase = self._current_phase()
         Ir    = self._current_Ir()
 
-        if   phase == 1: return self._play1(B, Ir)
-        elif phase == 2: return self._play2(B)
-        elif phase == 3: return self._play3(B, Ir)
-        elif phase == 4: return self._play4(B, Ir)
-        else:            return self._play5(B)
+        if phase == 1:
+            return self._play1(B, Ir)
+        elif phase == 2:
+            return self._play2(B)
+        elif phase == 3:
+            return self._play3(B, Ir)
+        elif phase == 4:
+            return self._play4(B, Ir)
+        else:
+            return self._play5(B)
 
     # ---- Phase 1: UNIFORMEXPLORATION ------------------------------------
     def _play1(self, B, Ir):

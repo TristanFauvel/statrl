@@ -23,9 +23,10 @@ probabilities are modeled by Dirichlet posteriors.
 """
 
 
+import numpy as np
 import scipy.stats as stat
 from statrl.settings.markovdecisionprocess.discrete_nostructure.agent import MDPAgent
-from statrl.settings.utils import *
+from statrl.settings.utils import allmax, categorical_sample
 
 
 class PSRL(MDPAgent):

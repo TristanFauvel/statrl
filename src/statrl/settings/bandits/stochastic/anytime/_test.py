@@ -49,7 +49,7 @@ def test_massive() -> None:
     from statrl.settings.bandits.stochastic.anytime.agents.UCB import UCB
     from statrl.settings.bandits.stochastic.anytime.agents.TS import TS
 
-    from statrl.settings.utils import klBern,klGauss
+    from statrl.settings.utils import klBern
 
 
 

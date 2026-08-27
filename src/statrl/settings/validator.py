@@ -7,7 +7,6 @@ in the setting guidelines.
 
 from pathlib import Path
 import importlib
-import yaml
 import importlib.util
 
 from statrl.experiments.utils import load

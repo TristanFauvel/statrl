@@ -379,7 +379,8 @@ class IMEDRL(MDPAgent):
 
                 delta = v - mu
 
-                h = lambda x: - np.sum(p * np.log(upper_bound - delta*x))
+                def h(x):
+                    return - np.sum(p * np.log(upper_bound - delta*x))
 
                 res = minimize_scalar(h, bounds=(0, u), method='bounded')
                 x = - res.fun

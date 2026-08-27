@@ -1,19 +1,42 @@
 from statrl.settings.bandits.stochastic.batch.environment import BatchMAB
 
 from statrl.settings.bandits.stochastic.anytime.envs.parametric import BernoulliBandit, GaussianBandit, TruncatedGaussianBandit
+from statrl.settings.bandits.stochastic.batch.agents.baba_schedule import compute_baba_grid
 
 
 import math
 
 # Batch-size schedules — ell is the round index (0-based)
-_B_CONST     = lambda ell: 10
-_B_LINEAR    = lambda ell: int(ell + 1)
-_B_QUADRATIC = lambda ell: int((ell + 1) ** 2)
-_B_CUBIC     = lambda ell: int((ell + 1) ** 3)
-_B_EXP       = lambda ell: int(2 ** ell)
-_B_SEXP      =  lambda ell: int(math.exp(ell**1.5))
-_B_DOUBLE_EXP = lambda ell: int(math.exp(2 ** ell))
-_B_ABRUPT = lambda ell: 100 if (ell % 4==1) else int((ell+1)**3)
+def _B_CONST(ell):
+    return 10
+
+
+def _B_LINEAR(ell):
+    return int(ell + 1)
+
+
+def _B_QUADRATIC(ell):
+    return int((ell + 1) ** 2)
+
+
+def _B_CUBIC(ell):
+    return int((ell + 1) ** 3)
+
+
+def _B_EXP(ell):
+    return int(2 ** ell)
+
+
+def _B_SEXP(ell):
+    return int(math.exp(ell**1.5))
+
+
+def _B_DOUBLE_EXP(ell):
+    return int(math.exp(2 ** ell))
+
+
+def _B_ABRUPT(ell):
+    return 100 if (ell % 4 == 1) else int((ell + 1) ** 3)
 
 def exotic_schedule(t):
     """Batch schedule cycling through linear, exponential, constant, and cubic.
@@ -33,7 +56,7 @@ def exotic_schedule(t):
 
 _B_EXOTIC = exotic_schedule
 
-from statrl.settings.bandits.stochastic.batch.agents.baba_schedule import compute_baba_grid
+
 def baba_schedule(horizon, nbArms):
     """Batch sizes of the BABA epoch grid, as a plain list.
 

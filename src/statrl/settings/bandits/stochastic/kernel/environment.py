@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 
 from gymnasium import Env as Environment
@@ -71,10 +73,11 @@ class KernelBanditEnv(Environment):
         self.kernel = kernel
         self.noise_std = noise_std
         self.name = name
+        self.displayname: str = name
 
         self.function_seed = function_seed
-        self.renderers = []
-        self.last = (None, 0.0)
+        self.renderers: list = []
+        self.last: tuple[Optional[int], float] = (None, 0.0)
 
         self._sample_function()
 
@@ -191,7 +194,7 @@ class KernelBanditEnv(Environment):
         """
         return float(self._means[arm])
 
-    def step(self, arm: int)-> float:
+    def step(self, arm: int) -> float:  # type: ignore[override]  # bandit API: reward only, not gym's 5-tuple
         """Sample one reward from the given arm.
 
         Parameters

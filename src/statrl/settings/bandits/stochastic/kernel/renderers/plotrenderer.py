@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Optional
 
-import numpy as np
 import matplotlib.pyplot as plt
 
 from statrl.settings.bandits.stochastic.kernel.environment import KernelBanditEnv
@@ -38,9 +37,9 @@ class PlotRenderer:
 
     def __init__(self, pause: float = 0.1) -> None:
         self.pause = pause
-        self.fig = None
-        self.ax = None
-        self.colorbar = None
+        self.fig: Optional[plt.Figure] = None
+        self.ax: Optional[plt.Axes] = None
+        self.colorbar: Optional[plt.Colorbar] = None
         self.started = False
 
     def start(self, env: KernelBanditEnv) -> None:
@@ -111,6 +110,8 @@ class PlotRenderer:
         last: tuple[Optional[int], float] = (None, 0.0),
     ) -> None:
         """Clear the axes and redraw, dispatching on the feature dimension."""
+        assert self.ax is not None and self.fig is not None  # set by start(), which always runs first
+
         # Remove the previous colorbar before clearing/redrawing.
         if self.colorbar is not None:
             self.colorbar.remove()
@@ -138,6 +139,7 @@ class PlotRenderer:
         last: tuple[Optional[int], float],
     ) -> None:
         """Draw the latent function as a curve, for a 1-d feature space."""
+        assert self.ax is not None  # set by start(), which always runs first
         x = env.arm_features[:, 0]
         f = env.means
 
@@ -173,6 +175,7 @@ class PlotRenderer:
         last: tuple[Optional[int], float],
     ) -> None:
         """Draw the latent function as a colored scatter, for a 2-d feature space."""
+        assert self.ax is not None and self.fig is not None  # set by start(), which always runs first
         x = env.arm_features[:, 0]
         y = env.arm_features[:, 1]
         f = env.means
@@ -224,6 +227,7 @@ class PlotRenderer:
         last: tuple[Optional[int], float],
     ) -> None:
         """Draw a text summary, for a feature space of dimension 3 or more."""
+        assert self.ax is not None  # set by start(), which always runs first
         lastaction, lastreward = last
 
         self.ax.axis("off")

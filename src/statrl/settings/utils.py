@@ -2,6 +2,7 @@
 
 import numpy as np
 from math import log
+from scipy.optimize import minimize_scalar, root_scalar
 
 
 def randmax(A: np.ndarray) -> int:
@@ -283,7 +284,6 @@ class Dirac:
 
 
 
-from scipy.optimize import minimize_scalar, root_scalar
 def KLinf_threshold(reward_history, mean_threshold, upper_bound=1.0, custom_optim=True):
     """Non-parametric divergence :math:`K_{\\inf}` between an empirical
     distribution and the set of distributions with mean above a threshold, evaluated using the concave dual.
@@ -334,11 +334,11 @@ def KLinf_threshold(reward_history, mean_threshold, upper_bound=1.0, custom_opti
 
     fallback = False
     if custom_optim:
-        def f(l):
-            return np.mean(np.log(1 - (X - mean_threshold) * l))
+        def f(lam):
+            return np.mean(np.log(1 - (X - mean_threshold) * lam))
 
-        def jac(l):
-            return -np.mean((X - mean_threshold) / (1 - (X - mean_threshold) * l))
+        def jac(lam):
+            return -np.mean((X - mean_threshold) / (1 - (X - mean_threshold) * lam))
 
         if jac(0) * jac(l_plus) >= 0:
             kinf = np.maximum(f(0), f(l_plus))
@@ -352,8 +352,8 @@ def KLinf_threshold(reward_history, mean_threshold, upper_bound=1.0, custom_opti
                 fallback = True
     if not custom_optim or fallback:
         # minimize -E[log(1-(X-mu^*)*lambda)]
-        def f(l):
-            return -np.mean(np.log(1 - (X - mean_threshold) * l))
+        def f(lam):
+            return -np.mean(np.log(1 - (X - mean_threshold) * lam))
 
         ret = minimize_scalar(
             f, method='bounded', bounds=(0, l_plus)

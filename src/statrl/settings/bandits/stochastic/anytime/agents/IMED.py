@@ -89,7 +89,7 @@ class IMED(BanditAgent):
     def __init__(self, nbArms: int, kullback: Callable[[float, float], float] = klGauss, name="IMED") -> None:
         self.kl = kullback
         self.nA = nbArms
-        if name==None:
+        if name is None:
             BanditAgent.__init__(self, name="IMED")
         else:
             BanditAgent.__init__(self, name=name)

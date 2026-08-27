@@ -53,10 +53,14 @@ def randomMap(sizeX, sizeY, density, lengthofwalks, np_random=np.random):
         b = np_random.binomial(1, p)
         if (b == 0):
             next = np_random.integers(4)
-            if (next == 0):     s = [(s[0] + 1) % sizeX, s[1]]
-            if (next == 1):     s = [(s[0] - 1) % sizeX, s[1]]
-            if (next == 2):     s = [s[0], (s[1] + 1) % sizeY]
-            if (next == 3):     s = [s[0], (s[1] - 1) % sizeY]
+            if next == 0:
+                s = [(s[0] + 1) % sizeX, s[1]]
+            if next == 1:
+                s = [(s[0] - 1) % sizeX, s[1]]
+            if next == 2:
+                s = [s[0], (s[1] + 1) % sizeY]
+            if next == 3:
+                s = [s[0], (s[1] - 1) % sizeY]
         else:
             s = [np_random.integers(sizeX), np_random.integers(sizeY)]
         maze[s[0]][s[1]] = 0.
@@ -217,7 +221,7 @@ class GridWorldWithWall(DiscreteMDP):
 
 
 
-        if (goal != None):
+        if goal is not None:
             self.goalstates = self.makeGoalState(xy = goal)
         else:
             self.goalstates = self.makeGoalStates(nbGoals)
@@ -305,7 +309,7 @@ class GridWorldWithWall(DiscreteMDP):
             The goal's state index, in a one-element list.
         """
         goalstates = []
-        if (xy == None):
+        if xy is None:
             xy = [np.random.integers(self.sizeX), np.random.integers(self.sizeY)]
             while (self.maze[xy[0]][xy[1]] != 1):
                 xy = [self.np_random.integers(self.sizeX), self.np_random.integers(self.sizeY)]
@@ -330,7 +334,7 @@ class GridWorldWithWall(DiscreteMDP):
         ndarray of shape (nS,)
             A Dirac at the chosen cell.
         """
-        if (xy==None):
+        if xy is None:
             xy =[np.random.integers(self.sizeX), np.random.integers(self.sizeY)]
             while (self.maze[xy[0]][xy[1]] != 1):
                 xy = [self.np_random.integers(self.sizeX), self.np_random.integers(self.sizeY)]
@@ -379,7 +383,6 @@ class GridWorldWithWall(DiscreteMDP):
         X = self.sizeX
         Y = self.sizeY
         P = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
-        nbempty=0
 
         for s in range(self.nS):
             x,y = self.from_s(s)
@@ -395,10 +398,14 @@ class GridWorldWithWall(DiscreteMDP):
                 ls = [x % X, (y - 1) % Y]
                 rs = [x % X, (y + 1) % Y]
                 ss=[x,y]
-                if (self.maze[us[0]][us[1]] <= 0 or self.maze[x][y] <= 0): us = ss
-                if (self.maze[ds[0]][ds[1]] <= 0 or self.maze[x][y] <= 0): ds = ss
-                if (self.maze[ls[0]][ls[1]] <= 0 or self.maze[x][y] <= 0): ls = ss
-                if (self.maze[rs[0]][rs[1]] <= 0 or self.maze[x][y] <= 0): rs = ss
+                if self.maze[us[0]][us[1]] <= 0 or self.maze[x][y] <= 0:
+                    us = ss
+                if self.maze[ds[0]][ds[1]] <= 0 or self.maze[x][y] <= 0:
+                    ds = ss
+                if self.maze[ls[0]][ls[1]] <= 0 or self.maze[x][y] <= 0:
+                    ls = ss
+                if self.maze[rs[0]][rs[1]] <= 0 or self.maze[x][y] <= 0:
+                    rs = ss
 
                 for a in range(self.nA):
                     li = P[s][a]
@@ -576,7 +583,7 @@ class GridWorld(DiscreteMDP):
 
         self.action_space = spaces.Discrete(self.nA)
         self.observation_space = spaces.Discrete(self.nS)
-        if (goal != None):
+        if goal is not None:
             self.goalstates = self.makeGoalState(xy = goal)
         #if (map_name == "2-room"):
         #    self.goalstates = self.makeGoalState(xy = [sizeX - 2, sizeY - 2])
@@ -740,7 +747,7 @@ class GridWorld(DiscreteMDP):
             The goal's state index, in a one-element list.
         """
         goalstates = []
-        if (xy == None):
+        if xy is None:
             xy = [np.random.integers(self.sizeX), np.random.integers(self.sizeY)]
             while (self.maze[xy[0]][xy[1]] != 1):
                 xy = [self.np_random.integers(self.sizeX), self.np_random.integers(self.sizeY)]
@@ -764,7 +771,7 @@ class GridWorld(DiscreteMDP):
         ndarray of shape (nS,)
             A Dirac at the chosen cell.
         """
-        if (xy==None):
+        if xy is None:
             xy =[np.random.integers(self.sizeX), np.random.integers(self.sizeY)]
             while (self.maze[xy[0]][xy[1]] != 1):
                 xy = [self.np_random.integers(self.sizeX), self.np_random.integers(self.sizeY)]
@@ -831,10 +838,14 @@ class GridWorld(DiscreteMDP):
                 ls = [x % X, (y - 1) % Y]
                 rs = [x % X, (y + 1) % Y]
                 ss = [x, y]
-                if (self.maze[us[0]][us[1]] <= 0 or self.maze[x][y] <= 0): us = ss
-                if (self.maze[ds[0]][ds[1]] <= 0 or self.maze[x][y] <= 0): ds = ss
-                if (self.maze[ls[0]][ls[1]] <= 0 or self.maze[x][y] <= 0): ls = ss
-                if (self.maze[rs[0]][rs[1]] <= 0 or self.maze[x][y] <= 0): rs = ss
+                if self.maze[us[0]][us[1]] <= 0 or self.maze[x][y] <= 0:
+                    us = ss
+                if self.maze[ds[0]][ds[1]] <= 0 or self.maze[x][y] <= 0:
+                    ds = ss
+                if self.maze[ls[0]][ls[1]] <= 0 or self.maze[x][y] <= 0:
+                    ls = ss
+                if self.maze[rs[0]][rs[1]] <= 0 or self.maze[x][y] <= 0:
+                    rs = ss
                 for a in range(self.nA):
                     li = P[s][a]
                     li.append((self.massmap[a][0], self.revmapping[self.to_s(ls)], False))

@@ -1,13 +1,18 @@
 
 
 
+from typing import Sequence, Union
+
 import numpy as np
 from statrl.settings.bandits.stochastic.anytime.environment import StochasticBanditEnv
 import statrl.settings.bandits.stochastic.anytime.envs.distributions as distributions
 
 ## some functions that create specific MABs
 
-def BernoulliBandit(means: np.ndarray, name: str = "MAB-Bernoulli") -> StochasticBanditEnv:
+Means = Union[Sequence[float], np.ndarray]
+
+
+def BernoulliBandit(means: Means, name: str = "MAB-Bernoulli") -> StochasticBanditEnv:
     """Build a Bernoulli bandit from a vector of arm means.
 
     Parameters
@@ -35,7 +40,7 @@ def BernoulliBandit(means: np.ndarray, name: str = "MAB-Bernoulli") -> Stochasti
     name = f'{name}-means-{s}'
     return StochasticBanditEnv([distributions.Bernoulli(p) for p in means], name=name)
 
-def BinomialBandit(means: np.ndarray, repetitions: int = 200, name: str = "MAB-Binomial") -> StochasticBanditEnv:
+def BinomialBandit(means: Means, repetitions: int = 200, name: str = "MAB-Binomial") -> StochasticBanditEnv:
     """Build a Binomial bandit from a vector of per-trial success probabilities.
 
     Parameters
@@ -57,7 +62,7 @@ def BinomialBandit(means: np.ndarray, repetitions: int = 200, name: str = "MAB-B
     name = f'{name}{repetitions}-means-{s}'
     return StochasticBanditEnv([distributions.Binomial(repetitions, p) for p in means], name=name)
 
-def GaussianBandit(means: np.ndarray, vars: np.ndarray, name: str = "MAB-Gaussian") -> StochasticBanditEnv:
+def GaussianBandit(means: Means, vars: Means, name: str = "MAB-Gaussian") -> StochasticBanditEnv:
     """Build a Gaussian bandit from vectors of means and variances.
 
     Parameters
@@ -82,7 +87,7 @@ def GaussianBandit(means: np.ndarray, vars: np.ndarray, name: str = "MAB-Gaussia
     name = f'{name}-means-{s}'
     return StochasticBanditEnv([distributions.Gaussian(m, v) for m,v in zip(means, vars)], name=name)
 
-def TruncatedGaussianBandit(means: np.ndarray, sigma: float = 0.5, low: float = -1.0, high: float = 1.0, name: str = "MAB-TruncGaussian") -> StochasticBanditEnv:
+def TruncatedGaussianBandit(means: Means, sigma: float = 0.5, low: float = -1.0, high: float = 1.0, name: str = "MAB-TruncGaussian") -> StochasticBanditEnv:
     """Build a bandit whose arms are Gaussians truncated to ``[low, high]``. 
 
     Parameters

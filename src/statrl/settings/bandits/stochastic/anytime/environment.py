@@ -58,6 +58,7 @@ class StochasticBanditEnv(Environment):
     def __init__(self, rewarddistributions: list, name: str, last: tuple[Optional[int], float] = (None, 0.0)) -> None:
         self.rewarddistributions = rewarddistributions
         self.name = name
+        self.displayname: str = name
         self.renderers: list = []
         self.last = last
 

@@ -176,7 +176,6 @@ class Opti_controller(MDPAgent):
         itera = 0
         while True:
             #print("[Opt]",itera)
-            sorted_indices = np.argsort(u0)  # sorted in ascending orders
             for s in range(self.nS):
                 temp = np.zeros(self.nA)
                 for a in range(self.nA):
