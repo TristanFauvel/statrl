@@ -35,6 +35,13 @@ jobs:
       - name: Build HTML
         run: sphinx-build -b html -W --keep-going docs/source docs/_build/html
 
+      - name: Run documentation doctests
+        run: sphinx-build -b doctest docs/source docs/_build/doctest
+
+      - name: Check external links
+        continue-on-error: true
+        run: sphinx-build -b linkcheck docs/source docs/_build/linkcheck
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:

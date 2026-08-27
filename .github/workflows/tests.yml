@@ -23,3 +23,17 @@ jobs:
 
       - name: Run tests
         run: pytest
+
+      # Executes the Examples sections of every docstring, so they cannot drift
+      # from the code. _test.py files are internal smoke scripts, not doctests.
+      - name: Run docstring examples
+        run: pytest --doctest-modules src/statrl --ignore-glob='*_test.py'
+
+      # The examples/ scripts are documentation too: they are included verbatim
+      # in docs/source/auto_examples.rst. 
+      - name: Check examples load
+        run: |
+          for f in examples/*.py; do
+            echo "checking $f"
+            python -c "import runpy, sys; runpy.run_path(sys.argv[1])" "$f"
+          done
