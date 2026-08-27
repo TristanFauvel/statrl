@@ -4,6 +4,49 @@ from statrl.settings.utils import Dirac
 import numpy as np
 
 class RiverSwim(DiscreteMDP):
+    """The RiverSwim hard-exploration benchmark MDP.
+
+    The agent starts at the left bank of a river of ``nbStates`` states. Going
+    left always succeeds and pays a small reward at the leftmost state. Going
+    right pays a large reward at the rightmost state but succeeds only with
+    probability ``rightProbaright``, and may even drift back. An agent must
+    therefore give up a certain small reward for many steps to reach an
+    uncertain large one.
+
+    Parameters
+    ----------
+    nbStates : int
+        Number of states, i.e. the length of the river. The longer it is, the
+        harder exploration becomes.
+    rightProbaright : float, default=0.6
+        Probability that swimming right moves right.
+    rightProbaLeft : float, default=0.05
+        Probability that swimming right drifts left instead.
+    rewardL : float, default=0.1
+        Reward for going left at the leftmost state.
+    rewardR : float, default=0.99
+        Reward for going right at the rightmost state.
+    name : str, default='RiverSwim'
+        Label used in logfiles, plot titles, and dump filenames.
+
+    Attributes
+    ----------
+    nameActions : list of str
+        ``["R", "L"]`` — action 0 is right, action 1 is left.
+
+    See Also
+    --------
+    ErgodicRiverSwim : A variant where every state stays reachable under both actions.
+
+    Examples
+    --------
+    >>> env = RiverSwim(6)
+    >>> env.nS, env.nA
+    (6, 2)
+    >>> env.getMeanReward(5, 0)      # large reward at the far bank
+    0.99
+    """
+
     def __init__(self, nbStates, rightProbaright=0.6, rightProbaLeft=0.05, rewardL=0.1,
                  rewardR=0.99,name="RiverSwim"):  # , ergodic=False):
         self.nS = nbStates
@@ -66,6 +109,38 @@ class RiverSwim(DiscreteMDP):
 
 
 class ErgodicRiverSwim(DiscreteMDP):
+    """RiverSwim variant in which swimming left may still drift right.
+
+    Adds a small ``ergodic`` leak to the left action, so every state remains
+    reachable under every policy. Algorithms whose guarantees assume an
+    ergodic MDP need this variant rather than plain :class:`RiverSwim`.
+
+    Parameters
+    ----------
+    nbStates : int
+        Number of states.
+    rightProbaright : float, default=0.6
+        Probability that swimming right moves right.
+    rightProbaLeft : float, default=0.05
+        Probability that swimming right drifts left instead.
+    rewardL : float, default=0.1
+        Reward for going left at the leftmost state.
+    rewardR : float, default=1.0
+        Reward for going right at the rightmost state.
+    ergodic : float, default=0.001
+        Leak probability on the left action; half of it moves right and the
+        rest stays put. Larger values make exploration easier and the instance
+        less discriminating.
+    name : str, default='RiverSwim'
+        Label used in logfiles and figures. Shares
+        :class:`RiverSwim`'s default, so pass a distinct name when comparing
+        the two in one results folder.
+
+    See Also
+    --------
+    RiverSwim : The non-ergodic original.
+    """
+
     def __init__(self, nbStates, rightProbaright=0.6, rightProbaLeft=0.05, rewardL=0.1,
                  rewardR=1., ergodic=0.001, name="RiverSwim"):  # , ergodic=False):
         self.nS = nbStates

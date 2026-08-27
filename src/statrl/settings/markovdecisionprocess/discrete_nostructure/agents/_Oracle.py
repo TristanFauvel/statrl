@@ -3,6 +3,23 @@ from statrl.settings.utils import   categorical_sample, allmax
 
 from statrl.settings.markovdecisionprocess.discrete_nostructure.agent import MDPAgent
 def build_opti(name, env, nS, nA):
+    """Build the oracle for an environment.
+
+    Parameters
+    ----------
+    name : str
+        Environment name. Currently ignored: the per-map hand-coded oracles
+        are commented out, so every environment gets the generic solver.
+    env : DiscreteMDP
+        The environment to solve.
+    nS, nA : int
+        Numbers of states and actions.
+
+    Returns
+    -------
+    Opti_controller
+        An oracle whose policy was computed by value iteration.
+    """
     #if ("2-room" in name):
     #    return  Opti_911_2room(env)
     #elif ("4-room" in name):
@@ -10,20 +27,42 @@ def build_opti(name, env, nS, nA):
     #elif ("RiverSwim" in name):
     #    return Opti_swimmer(env)
     #else:
-        return Opti_controller(env, nS, nA)
+    return Opti_controller(env, nS, nA)
 
 
 
 class Opti_controller(MDPAgent):
-    def __init__(self, env, nS, nA, epsilon=0.001, max_iter=100):
-        """
+    """Oracle that solves the MDP exactly and follows its optimal policy.
 
-        :param env:
-        :param nS:
-        :param nA:
-        :param epsilon: precision of VI stoping criterion
-        :param max_iter:
-        """
+    Reads the true transitions and mean rewards from the environment at
+    construction and runs value iteration on them, so it plays optimally from
+    the first step. 
+
+    Parameters
+    ----------
+    env : DiscreteMDP
+        The environment. Must expose ``getTransition`` and ``getMeanReward``;
+        otherwise ``extractRewardsAndTransitions`` is tried as a fallback.
+    nS, nA : int
+        Numbers of states and actions.
+    epsilon : float, default=0.001
+        Stopping precision recorded on the instance. The value iteration run
+        at construction uses a much tighter ``1e-7`` regardless, so the policy
+        is effectively exact.
+    max_iter : int, default=100
+        Iteration cap recorded on the instance; the construction-time run uses
+        100000.
+
+    Attributes
+    ----------
+    policy : ndarray of shape (nS, nA)
+        Optimal stochastic policy, uniform over tied optimal actions.
+    u : ndarray of shape (nS,)
+        Bias function from value iteration.
+
+    """
+
+    def __init__(self, env, nS, nA, epsilon=0.001, max_iter=100):
         self.name="Oracle"
         self.env = env
         self.nS = nS
@@ -54,7 +93,22 @@ class Opti_controller(MDPAgent):
 
 
     def extractRewardsAndTransitions(self,s,a):
+        """Reader for the transitions and mean reward of a pair.
 
+        Parameters
+        ----------
+        s : int
+            The state.
+        a : int
+            The action.
+
+        Returns
+        -------
+        transition : ndarray of shape (nS,)
+            Probability of reaching each state.
+        reward : float
+            Mean reward of the pair.
+        """
         transition  = self.env.getTransition(s,a)
         reward = self.env.getMeanReward(s,a)
         #transition = np.zeros(self.nS)
@@ -65,16 +119,58 @@ class Opti_controller(MDPAgent):
         return transition, reward
 
     def reset(self, inistate):
+        """Start a new run. The policy is fixed, so nothing is cleared.
+
+        Parameters
+        ----------
+        inistate : int
+            Initial state; ignored.
+        """
         ()
 
     def play(self, state):
+        """Sample an action from the optimal policy for this state.
+
+        Parameters
+        ----------
+        state : int
+            Current state.
+
+        Returns
+        -------
+        int
+            An optimal action, drawn uniformly among ties.
+        """
         a = categorical_sample([self.policy[state,a] for a in range(self.nA)], np.random)
         return a
 
     def update(self, state, action, reward, observation):
+        """Ignore the transition (the oracle has nothing to learn).
+
+        Parameters
+        ----------
+        state : int
+            State the action was taken in.
+        action : int
+            Action taken.
+        reward : float
+            Reward observed.
+        observation : int
+            State reached.
+        """
         ()
 
     def VI(self, epsilon=0.01, max_iter=1000):
+        """Solve the true MDP by value iteration and store the greedy policy.
+
+        Parameters
+        ----------
+        epsilon : float, default=0.01
+            Stopping threshold on the span of successive bias differences.
+        max_iter : int, default=1000
+            Iteration cap. On reaching it the current iterate is kept and a
+            non-convergence warning is printed.
+        """
         u0 = self.u - min(self.u)  # np.zeros(self.nS)
         u1 = np.zeros(self.nS)
         itera = 0
@@ -107,6 +203,16 @@ class Opti_controller(MDPAgent):
 
 
 class Opti_swimmer(MDPAgent):
+    """Hand-coded oracle for RiverSwim: always swim right.
+
+    Skips value iteration by encoding the known optimal policy directly.
+
+    Parameters
+    ----------
+    env : DiscreteMDP
+        The RiverSwim instance.
+    """
+
     def __init__(self, env):
         self.env = env
         self.policy = np.zeros(self.env.nS)
@@ -114,16 +220,68 @@ class Opti_swimmer(MDPAgent):
         super(Opti_swimmer, self).__init__(env.nS, env.nA, self.name)
 
     def reset(self, inistate):
+        """Start a new run. The policy is fixed, so nothing is cleared.
+
+        Parameters
+        ----------
+        inistate : int
+            Initial state; ignored.
+        """
         ()
 
     def play(self, state):
+        """Always take action 0, "swim right".
+
+        Parameters
+        ----------
+        state : int
+            Current state; ignored.
+
+        Returns
+        -------
+        int
+            Always ``0``.
+        """
         return 0
 
     def update(self, state, action, reward, observation):
+        """Ignore the transition (the oracle has nothing to learn).
+
+        Parameters
+        ----------
+        state : int
+            State the action was taken in.
+        action : int
+            Action taken.
+        reward : float
+            Reward observed.
+        observation : int
+            State reached.
+        """
         ()
 
 
 class Opti_77_4room:
+    """Hand-coded oracle for the 7x7 four-room gridworld.
+
+    Encodes the optimal action of each cell as a 7x7 table.
+
+    Parameters
+    ----------
+    env : object
+        The gridworld instance. Must expose a ``mapping`` from environment
+        states to grid cells.
+
+    Notes
+    -----
+    Unlike the other oracles this class does not inherit from
+    :class:`~statrl.settings.markovdecisionprocess.discrete_nostructure.agent.MDPAgent`,
+    yet its constructor calls ``super().__init__(nS, nA, name)``, which
+    resolves to :class:`object` and raises :exc:`TypeError`. The class is
+    therefore not currently constructible; the same applies to
+    :class:`Opti_911_2room`.
+    """
+
     def __init__(self, env):
         self.env = env
         self.name="Opti_77_4room"
@@ -145,17 +303,65 @@ class Opti_77_4room:
 
 
     def reset(self, inistate):
+        """Start a new run. The policy is fixed, so nothing is cleared.
+
+        Parameters
+        ----------
+        inistate : int
+            Initial state; ignored.
+        """
         ()
 
     def play(self, state):
+        """Look up the hand-coded action for this state's grid cell.
+
+        Parameters
+        ----------
+        state : int
+            Current state, mapped through ``env.mapping`` to a grid cell.
+
+        Returns
+        -------
+        float
+            The tabulated action. Note this is a float, since the policy table
+            is a :class:`~numpy.ndarray` of floats.
+        """
         s = self.mapping[state]
         return self.policy[s]
 
     def update(self, state, action, reward, observation):
+        """Ignore the transition (the oracle has nothing to learn).
+
+        Parameters
+        ----------
+        state : int
+            State the action was taken in.
+        action : int
+            Action taken.
+        reward : float
+            Reward observed.
+        observation : int
+            State reached.
+        """
         ()
 
 
 class Opti_911_2room:
+    """Hand-coded oracle for the 9x11 two-room gridworld.
+
+    Encodes the optimal action of each cell as a 9x11 table.
+
+    Parameters
+    ----------
+    env : object
+        The gridworld instance. Must expose a ``mapping`` from environment
+        states to grid cells.
+
+    Notes
+    -----
+    Not constructible as written; see :class:`Opti_77_4room`.
+    """
+
     def __init__(self, env):
         self.env = env
         self.name="Opti_911_2room"
@@ -179,11 +385,44 @@ class Opti_911_2room:
 
 
     def reset(self, inistate):
+        """Start a new run. The policy is fixed, so nothing is cleared.
+
+        Parameters
+        ----------
+        inistate : int
+            Initial state; ignored.
+        """
         ()
 
     def play(self, state):
+        """Look up the hand-coded action for this state's grid cell.
+
+        Parameters
+        ----------
+        state : int
+            Current state, mapped through ``env.mapping`` to a grid cell.
+
+        Returns
+        -------
+        float
+            The tabulated action. Note this is a float, since the policy table
+            is a :class:`~numpy.ndarray` of floats.
+        """
         s = self.mapping[state]
         return self.policy[s]
 
     def update(self, state, action, reward, observation):
+        """Ignore the transition (the oracle has nothing to learn).
+
+        Parameters
+        ----------
+        state : int
+            State the action was taken in.
+        action : int
+            Action taken.
+        reward : float
+            Reward observed.
+        observation : int
+            State reached.
+        """
         ()

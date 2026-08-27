@@ -5,11 +5,29 @@ from gymnasium import utils
 import string
 
 class TextRenderer:
+    """Print each MDP step to stdout as a colourized row of states.
+ 
+    The current state is highlighted red and every state reachable from it in
+    one step blue, alongside the action played and the reward it returned.
+
+    Attributes
+    ----------
+    started : bool
+        Whether the header has been printed yet; emitted lazily on the first
+        :meth:`render`.
+    """
 
     def __init__(self):
         self.started = False
 
     def start(self, env) -> None:
+        """Print the header naming the environment, its actions, and the legend.
+
+        Parameters
+        ----------
+        env : object
+            The environment being rendered.
+        """
         self.outfile = sys.stdout
         self.outfile.write("Environment: " + str(env.name) + "\n")
         self.outfile.write("Actions: "+ str(self._nameActions(env)) + "\n")
@@ -17,6 +35,13 @@ class TextRenderer:
         self.outfile.write("-"*30+"\n")
 
     def stop(self, env) -> None:
+        """Print the closing rule at the end of a rendered run.
+
+        Parameters
+        ----------
+        env : object
+            The environment being rendered.
+        """
         self.outfile.write("-"*30+"\n")
 
     def _nameActions(self, env) -> str:
@@ -24,7 +49,17 @@ class TextRenderer:
 
 
     def render(self,env,last):
+        """Print one step: the action, the reward, and the state row.
 
+        Parameters
+        ----------
+        env : DiscreteMDP
+            The environment being rendered.
+        last : tuple of (int, int or None, float)
+            The ``(state, action, reward)`` triple recorded by the
+            environment. A ``None`` action means no step has been taken yet,
+            and only the state row is printed.
+        """
         current, lastaction, lastreward = last
         if (not self.started):
             self.start(env)

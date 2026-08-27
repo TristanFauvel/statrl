@@ -7,56 +7,95 @@ from math import log
 
 
 class IMED(BanditAgent):
-    """
-    Indexed Minimum Empirical Divergence (IMED)
+    """Indexed Minimum Empirical Divergence, an asymptotically optimal bandit algorithm.
 
-    IMED is an index-based algorithm for stochastic multi-armed bandits,
-    designed to balance exploration and exploitation using a divergence-based index.
+    IMED assigns every arm the index
 
-    The key idea is to assign to each arm an index of the form:
+    .. math::
 
-        I_a(t) = N_a(t) * KL(μ_a(t), μ*(t)) + log(N_a(t))
+       I_a(t) = N_a(t)\\,\\mathrm{kl}\\!\\left(\\hat{\\mu}_a(t), \\hat{\\mu}^\\star(t)\\right)
+                + \\log N_a(t)
 
-    where:
-        - N_a(t) is the number of pulls of arm a
-        - μ_a(t) is the empirical mean reward of arm a
-        - μ*(t) is the best empirical mean across arms
-        - KL(·,·) is a divergence function (typically Bernoulli KL)
+    and pulls the arm minimizing it. The first term is large for an arm whose
+    empirical mean is confidently below the best one, the second penalizes
+    arms already pulled often; minimizing their sum balances exploration
+    against exploitation with **no tuning parameter** — no confidence level,
+    no exploration bonus, no schedule.
 
-    The algorithm selects the arm with the minimal index.
+    The regret matches the Lai-Robbins lower bound asymptotically [1]_, provided
+    ``kullback`` is the divergence of the true reward family.
+
+    Parameters
+    ----------
+    nbArms : int
+        Number of arms, which must equal ``env.number_arms``.
+    kullback : callable, default=:func:`~statrl.settings.utils.klGauss`
+        Divergence ``kl(x, y)`` between two means. Choose it to match the
+        rewards: :func:`~statrl.settings.utils.klBern` for Bernoulli,
+        :func:`~statrl.settings.utils.klGauss` for Gaussian or any
+        sub-Gaussian reward. A mismatched choice costs the optimality
+        guarantee but stays well defined.
+    name : str, default='IMED'
+        Label used in logfiles and plot legends. Give two IMED instances
+        distinct names when comparing divergences in one experiment.
 
     Attributes
     ----------
     kl : callable
-        Kullback-Leibler divergence function (problem-dependent).
-    nbDraws : np.ndarray
-        Number of times each arm has been selected.
-    cumRewards : np.ndarray
-        Cumulative reward per arm.
-    means : np.ndarray
-        Empirical mean reward per arm.
+        The divergence passed as ``kullback``.
+    nbDraws : ndarray of shape (nbArms,)
+        Number of pulls of each arm, :math:`N_a(t)`.
+    cumRewards : ndarray of shape (nbArms,)
+        Cumulative reward collected from each arm.
+    means : ndarray of shape (nbArms,)
+        Empirical mean of each arm, :math:`\\hat{\\mu}_a(t)`.
     maxMeans : float
-        Maximum empirical mean across all arms.
-    indexes : np.ndarray
-        IMED index value per arm.
+        Best empirical mean, :math:`\\hat{\\mu}^\\star(t)`.
+    indexes : ndarray of shape (nbArms,)
+        Current index of each arm; :meth:`select_arm` minimizes over it.
+
+    See Also
+    --------
+    statrl.settings.bandits.batch.agents.BatchIMED.BatchIMED :
+        The batched, distribution-free variant built on
+        :func:`~statrl.settings.utils.KLinf_threshold`.
+    statrl.settings.markovdecisionprocess.discrete_nostructure.agents.IMED_RL.IMEDRL :
+        The extension of the same index to ergodic MDPs.
+
+    Notes
+    -----
+    Arms never pulled have index ``0``, the smallest value the index can take,
+    so every arm is played once before any is repeated. Both a pull and an
+    update cost :math:`O(K)` time and :math:`O(K)` memory.
+
+    References
+    ----------
+    .. [1] Honda, J. and Takemura, A. "Non-asymptotic analysis of a new bandit
+           algorithm for semi-bounded rewards." *Journal of Machine Learning
+           Research*, 16(113):3721-3756, 2015.
+
+    Examples
+    --------
+    >>> from statrl.settings.bandits.stochastic.anytime.envs.parametric import BernoulliBandit
+    >>> from statrl.settings.bandits.stochastic.anytime.interaction import BanditInteraction
+    >>> from statrl.settings.utils import klBern
+    >>> env = BernoulliBandit([0.2, 0.9, 0.5])
+    >>> agent = IMED(env.number_arms, kullback=klBern)
+    >>> scores = BanditInteraction().run(env, agent, horizon=500)
+    >>> int(agent.nbDraws.argmax())          # the best arm is pulled most often
+    1
     """
 
     def __init__(self, nbArms: int, kullback: Callable[[float, float], float] = klGauss, name="IMED") -> None:
-        """
-        Parameters
-        ----------
-        nbArms : int
-            Number of available arms.
-        kullback : callable
-            Function computing KL divergence between two scalar means.
-        """
         self.kl = kullback
         self.nA = nbArms
         BanditAgent.__init__(self, name=name)
 
     def reset(self) -> None:
-        """
-        Reset internal statistics before a new run.
+        """Clear every statistic before a new independent run.
+
+        Counts, cumulative rewards, means, and indexes are all zeroed, so all
+        arms start tied and each is pulled once before any repeat.
         """
         self.nbDraws = np.zeros(self.nA)
         self.cumRewards = np.zeros(self.nA)
@@ -65,38 +104,37 @@ class IMED(BanditAgent):
         self.indexes = np.zeros(self.nA)
 
     def select_arm(self, state: int = 0) -> int:
-        """
-        Select the next arm to pull.
+        """Pull the arm of minimal IMED index, :math:`\\arg\\min_a I_a(t)`.
+
+        Parameters
+        ----------
+        state : int, default=0
+            Ignored; a bandit has no state. Accepted so the agent also fits
+            the state-passing signature used in the MDP settings.
 
         Returns
         -------
         int
-            Index of selected arm.
-
-        Decision rule
-        -------------
-        Select arm with minimum IMED index:
-            argmin_a I_a(t)
+            Index of the selected arm. Ties are broken uniformly at random by
+            :func:`~statrl.settings.utils.randmin`, which matters at the start
+            of a run when every index is still ``0``.
         """
         return randmin(self.indexes)
 
     def update(self, arm: int, reward: float) -> None:
-        """
-        Update internal statistics after observing a reward.
+        """Refresh the empirical means and recompute every index.
+
+        Increments the pull count and cumulative reward of ``arm``, updates
+        its empirical mean and the running best mean, then recomputes
+        :math:`I_a(t)` for all arms — all of them, because they share
+        :math:`\\hat{\\mu}^\\star(t)`.
 
         Parameters
         ----------
         arm : int
-            Selected arm index.
+            Index of the arm that was pulled.
         reward : float
-            Observed reward.
-
-        Procedure
-        ---------
-        1. Update cumulative reward and pull count
-        2. Recompute empirical means
-        3. Update best empirical mean
-        4. Recompute IMED indices
+            Reward observed for that arm.
         """
         self.cumRewards[arm] += reward
         self.nbDraws[arm] += 1

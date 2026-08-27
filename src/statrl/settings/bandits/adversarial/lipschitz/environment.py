@@ -46,6 +46,22 @@ class LipschitzAdversarialEnv:
         self.current_f: Optional[Callable[[np.ndarray], float]] = None
 
     def reset(self, seed: Optional[int] = None) -> tuple[Any, dict[str, Any]]:
+        """Rewind to round 0 and draw the first reward function.
+
+        Parameters
+        ----------
+        seed : int, optional
+            If given, seeds the **global** :mod:`numpy.random` state, which
+            also affects any other code drawing from it. Pass ``None`` to
+            leave it untouched.
+
+        Returns
+        -------
+        obs : object
+            Observation at round 0, or ``None`` in the pure bandit case.
+        info : dict
+            Empty, for :class:`gymnasium.Env` compatibility.
+        """
         if seed is not None:
             np.random.seed(seed)
 

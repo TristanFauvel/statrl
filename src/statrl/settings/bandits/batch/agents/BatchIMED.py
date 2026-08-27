@@ -32,12 +32,51 @@ with the difference lying in *when* N_a and hat_F_a are updated:
 
 
 class BatchIMED(BatchBanditAgent):
-    """B-IMED adapté (3b): within-batch sequential index updates.
+    """Batched IMED caching :math:`K_{\\inf}` across each batch.
 
-    During batchplay, N_a is incremented after each draw and only the index
-    of the pulled arm is recomputed (other arms are unchanged).  This reduces
-    batchplay from O(B × K × KLinf) to O(B × 1 × KLinf).
-    Reward histories are updated only at the end via batchupdate.
+    Same non-parametric index [1]_ as
+    :class:`~statrl.settings.bandits.batch.agents.BIMED.BIMED`, but
+    :math:`K_{\\inf}` is evaluated once per arm in :meth:`batchupdate` and held
+    in ``kinfs`` for the whole batch. Since the reward histories cannot change
+    mid-batch, that value is exactly what a recomputation would return — so
+    the caching is free of approximation, and makes a batch's cost independent
+    of its size.
+
+    Parameters
+    ----------
+    nbArms : int
+        Number of arms.
+    bound : float, default=1.0
+        Known upper bound of the reward support.
+    batchagnostic : bool, default=False
+        If True, ``x_threshold`` is advanced pull by pull as though the agent
+        were unbatched, rather than set once from the batch size. The agent
+        then behaves the same whatever the batch schedule — useful as a
+        control, and reflected in its name (``ABatchIMED``).
+    **kwargs : dict
+        Ignored; accepted so the batched agents share a constructor signature.
+
+    Attributes
+    ----------
+    kinfs : ndarray of shape (nbArms,)
+        Cached :math:`K_{\\inf}` per arm, refreshed once per batch. Zero for
+        the empirical leader and for arms with no observations.
+    nbDraws, nbDraws_start : ndarray of shape (nbArms,)
+        Running and batch-boundary pull counts.
+    x_threshold : float
+        Within-batch inflation factor.
+
+    See Also
+    --------
+    statrl.settings.bandits.batch.agents.BIMED.BIMED :
+        Recomputes :math:`K_{\\inf}` inside the batch.
+    BatchIMED2 : A variant whose eligibility test weighs information rather than counts.
+
+    References
+    ----------
+    .. [1] Honda, J. and Takemura, A. "Non-asymptotic analysis of a new bandit
+           algorithm for semi-bounded rewards." *Journal of Machine Learning
+           Research*, 16(113):3721-3756, 2015.
     """
 
     def __init__(self, nbArms, bound=1.0, batchagnostic=False, **kwargs):
@@ -48,6 +87,13 @@ class BatchIMED(BatchBanditAgent):
         BatchBanditAgent.__init__(self, name=name)
 
     def reset(self):
+        """Clear every statistic before a new independent run.
+
+        Two pull counters are kept: ``nbDraws`` is the running total, while
+        ``nbDraws_start`` freezes it at the last batch boundary. The index uses
+        both, which is what lets an arm's index move within a batch while the
+        empirical distribution it is based on stays fixed.
+        """
         self.nbDraws = np.zeros(self.nbArms) # total number of draws of each arm
         self.nbDraws_start = np.zeros(self.nbArms) # number of draws of each arm at the start of an episode
         self.cumRewards = np.zeros(self.nbArms)
@@ -58,6 +104,18 @@ class BatchIMED(BatchBanditAgent):
         self.rewardHistory = [[] for _ in range(self.nbArms)]
 
     def play(self):
+        """Minimize the index over the arms still eligible within this batch.
+
+        An arm is eligible if it ties the empirical leader, or has not yet
+        exhausted its within-batch budget ``x_threshold * nbDraws_start``.
+        Restricting the minimization keeps a batch from over-committing to one
+        arm on statistics frozen at the batch boundary.
+
+        Returns
+        -------
+        int
+            The eligible arm of minimal index.
+        """
         a1 = randmax(self.meanRewards)
         a0 = randmin(np.array([self.indexes[a] for a in range(self.nbArms) if (self.meanRewards[a]==self.meanRewards[a1]) or (self.nbDraws[a]<=np.floor(self.x_threshold*self.nbDraws_start[a])+1)]))
         return a0
@@ -76,6 +134,18 @@ class BatchIMED(BatchBanditAgent):
     # Online interface
     # ------------------------------------------------------------------
     def update(self, arm, reward):
+        """Record one ``(arm, reward)`` pair and recompute every index.
+
+        The single-pull path, used outside batched interaction. Within a
+        batch, :meth:`batchupdate` is called instead.
+
+        Parameters
+        ----------
+        arm : int
+            Index of the arm that was pulled.
+        reward : float
+            Reward observed for it.
+        """
         self.rewardHistory[arm].append(reward)
         self.cumRewards[arm] += reward
         self.nbDraws[arm] += 1
@@ -87,12 +157,23 @@ class BatchIMED(BatchBanditAgent):
     # Batch interface (adapted)
     # ------------------------------------------------------------------
     def batchplay(self, batchsize):
-        """Increment N_a and refresh only the pulled arm's index each step.
+        """Commit a batch, refreshing only the pulled arm's index at each step.
 
-        Since rewardHistory (and therefore hat_F_a) does not change during
-        batchplay, only N_a of the selected arm changes → only that arm's
-        index needs recomputing.  This reduces cost from O(B×K×KLinf) to
-        O(B×KLinf).
+        The reward histories — and hence each arm's empirical distribution
+        :math:`\\hat{F}_a` — do not change during a batch, so a pull only moves
+        :math:`N_a` for the arm chosen. Recomputing that one index instead of
+        all of them brings the cost of a batch down from
+        :math:`O(B \\cdot K \\cdot K_{\\inf})` to :math:`O(B \\cdot K_{\\inf})`.
+
+        Parameters
+        ----------
+        batchsize : int
+            Number of pulls in this batch.
+
+        Returns
+        -------
+        list of int
+            Exactly ``batchsize`` arm indices.
         """
         batcharms = []
         t = sum(self.nbDraws)
@@ -111,7 +192,23 @@ class BatchIMED(BatchBanditAgent):
         return batcharms
 
     def batchupdate(self, batcharm, batchreward):
-        """Receive rewards; update histories and means at end of batch."""
+        """Fold in the batch's rewards and re-freeze the pull counts.
+
+        Extends each arm's reward history, refreshes its empirical mean, and
+        snapshots ``nbDraws`` into ``nbDraws_start`` to open the next batch.
+
+        Parameters
+        ----------
+        batcharm : list of int
+            The arms that were pulled.
+        batchreward : list of float
+            The rewards observed for them.
+
+        Notes
+        -----
+        ``nbDraws`` is not incremented here: :meth:`batchplay` already did so
+        as it committed each pull.
+        """
         arm_arr = np.asarray(batcharm)
         rew_arr = np.asarray(batchreward)
         for a in range(self.nbArms):
@@ -133,12 +230,36 @@ class BatchIMED(BatchBanditAgent):
 
 
 class BatchIMED2(BatchBanditAgent):
-    """B-IMED adapté (3b): within-batch sequential index updates.
+    """Batched IMED whose within-batch budget is measured in information.
 
-    During batchplay, N_a is incremented after each draw and only the index
-    of the pulled arm is recomputed (other arms are unchanged).  This reduces
-    batchplay from O(B × K × KLinf) to O(B × 1 × KLinf).
-    Reward histories are updated only at the end via batchupdate.
+    Differs from :class:`BatchIMED` only in :meth:`play`: the eligibility test
+    compares :math:`N_a K_{\\inf}` against its value at the batch boundary,
+    throttling an arm by the information it has accumulated rather than by its
+    pull count. Arms whose :math:`K_{\\inf}` is near zero — those close to the
+    leader — are therefore barely throttled at all.
+
+    Parameters
+    ----------
+    nbArms : int
+        Number of arms.
+    bound : float, default=1.0
+        Known upper bound of the reward support.
+    batchagnostic : bool, default=False
+        If True, advance ``x_threshold`` pull by pull as an unbatched agent
+        would; the instance is then named ``B-IMED (doubly)``.
+    **kwargs : dict
+        Ignored; accepted so the batched agents share a constructor signature.
+
+    Attributes
+    ----------
+    kinfs : ndarray of shape (nbArms,)
+        Cached :math:`K_{\\inf}` per arm, refreshed once per batch.
+    batchsize : int
+        Size of the batch currently being committed.
+
+    See Also
+    --------
+    BatchIMED : The count-based variant.
     """
 
     def __init__(self, nbArms, bound=1.0, batchagnostic=False, **kwargs):
@@ -149,6 +270,13 @@ class BatchIMED2(BatchBanditAgent):
         BatchBanditAgent.__init__(self, name=name)
 
     def reset(self):
+        """Clear every statistic before a new independent run.
+
+        Two pull counters are kept: ``nbDraws`` is the running total, while
+        ``nbDraws_start`` freezes it at the last batch boundary. The index uses
+        both, which is what lets an arm's index move within a batch while the
+        empirical distribution it is based on stays fixed.
+        """
         self.nbDraws = np.zeros(self.nbArms) # total number of draws of each arm
         self.nbDraws_start = np.zeros(self.nbArms) # number of draws of each arm at the start of an episode
         self.cumRewards = np.zeros(self.nbArms)
@@ -159,6 +287,18 @@ class BatchIMED2(BatchBanditAgent):
         self.rewardHistory = [[] for _ in range(self.nbArms)]
 
     def play(self):
+        """Take the minimal-index arm while its budget holds, else the leader.
+
+        The budget test compares :math:`N_a K_{\\inf}` against
+        ``x_threshold`` times its value at the batch boundary, so it throttles
+        an arm by the *information* already accrued rather than by pull count.
+
+        Returns
+        -------
+        int
+            The minimal-index arm when it is still within budget, otherwise
+            the current empirical leader.
+        """
         a1 = randmax(self.meanRewards)
         # THE FOLLOWING RULE fails:
         #a = randmin([self.indexes[a] for a in range(self.nbArms) if (self.meanRewards[a]==self.meanRewards[a1]) or (self.nbDraws[a]<=np.floor(self.x_threshold*self.nbDraws_start[a])+1)])
@@ -174,6 +314,17 @@ class BatchIMED2(BatchBanditAgent):
         return a1
 
     def play_alter(self):
+       """Alternative selection rule, kept for comparison and unused by default.
+
+       Minimizes the *pull count* over arms whose index does not exceed the
+       leader's, instead of minimizing the index itself. Nothing in the class
+       calls this; :meth:`play` is the rule in force.
+
+       Returns
+       -------
+       int
+           The selected arm.
+       """
        # Alternative version:
        a1 = randmax(self.meanRewards)
 
@@ -202,6 +353,18 @@ class BatchIMED2(BatchBanditAgent):
     # Online interface
     # ------------------------------------------------------------------
     def update(self, arm, reward):
+        """Record one ``(arm, reward)`` pair and recompute every index.
+
+        The single-pull path, used outside batched interaction. Within a
+        batch, :meth:`batchupdate` is called instead.
+
+        Parameters
+        ----------
+        arm : int
+            Index of the arm that was pulled.
+        reward : float
+            Reward observed for it.
+        """
         self.rewardHistory[arm].append(reward)
         self.cumRewards[arm] += reward
         self.nbDraws[arm] += 1
@@ -213,12 +376,23 @@ class BatchIMED2(BatchBanditAgent):
     # Batch interface (adapted)
     # ------------------------------------------------------------------
     def batchplay(self, batchsize):
-        """Increment N_a and refresh only the pulled arm's index each step.
+        """Commit a batch, refreshing only the pulled arm's index at each step.
 
-        Since rewardHistory (and therefore hat_F_a) does not change during
-        batchplay, only N_a of the selected arm changes → only that arm's
-        index needs recomputing.  This reduces cost from O(B×K×KLinf) to
-        O(B×KLinf).
+        The reward histories — and hence each arm's empirical distribution
+        :math:`\\hat{F}_a` — do not change during a batch, so a pull only moves
+        :math:`N_a` for the arm chosen. Recomputing that one index instead of
+        all of them brings the cost of a batch down from
+        :math:`O(B \\cdot K \\cdot K_{\\inf})` to :math:`O(B \\cdot K_{\\inf})`.
+
+        Parameters
+        ----------
+        batchsize : int
+            Number of pulls in this batch.
+
+        Returns
+        -------
+        list of int
+            Exactly ``batchsize`` arm indices.
         """
         batcharms = []
         self.batchsize=batchsize
@@ -238,7 +412,23 @@ class BatchIMED2(BatchBanditAgent):
         return batcharms
 
     def batchupdate(self, batcharm, batchreward):
-        """Receive rewards; update histories and means at end of batch."""
+        """Fold in the batch's rewards and re-freeze the pull counts.
+
+        Extends each arm's reward history, refreshes its empirical mean, and
+        snapshots ``nbDraws`` into ``nbDraws_start`` to open the next batch.
+
+        Parameters
+        ----------
+        batcharm : list of int
+            The arms that were pulled.
+        batchreward : list of float
+            The rewards observed for them.
+
+        Notes
+        -----
+        ``nbDraws`` is not incremented here: :meth:`batchplay` already did so
+        as it committed each pull.
+        """
         arm_arr = np.asarray(batcharm)
         rew_arr = np.asarray(batchreward)
         for a in range(self.nbArms):

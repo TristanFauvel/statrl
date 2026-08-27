@@ -37,6 +37,20 @@ REQUIRED_DIRS = [
 # ----------------------------------------------------------------------
 
 def report(ok, message):
+    """Print one check result and pass its verdict through.
+
+    Parameters
+    ----------
+    ok : bool
+        Whether the check passed.
+    message : str
+        Description of what was checked.
+
+    Returns
+    -------
+    bool
+        The ``ok`` argument, unchanged.
+    """
     symbol = "✓" if ok else "✗"
     print(f"{symbol} {message}")
     return ok

@@ -54,17 +54,51 @@ def _kl_plus(mu: float, mu_star: float, kl_fn) -> float:
 
 from statrl.settings.bandits.batch.agents.baba_schedule import compute_baba_grid
 class BABA(BatchBanditAgent):
-    """
+    """Batched Anytime Bandit Algorithm
+    BABA divides the run into *epochs*, each split into five phases with a
+    fixed role: uniform exploration, exploitation of the leader, an
+    elimination test, a correction pass, and a final exploitation phase.  
+
     Parameters
     ----------
-    nbArms       : int
-    bound        : float  — upper bound of reward support (passed through,
-                            used for KL clipping in Bernoulli mode)
-    phase_labels : list[int]  — phase 1..5 per round (from compute_baba_grid)
-    epoch_ids    : list[int]  — epoch index (1-based) per round
-    epoch_I      : dict[int, int]  — {epoch_id: Ir} epoch boundaries
-    kl_type      : 'bernoulli' | 'gaussian'  — parametric KL to use
-    variance     : float  — reward variance V (Gaussian KL only, default 0.25)
+    nbArms : int
+        Number of arms.
+    horizon : int, default=100000
+        Horizon the schedule is computed for, when one is not supplied.
+    bound : float, default=1.0
+        Upper bound of the reward support, used to clip the KL in Bernoulli
+        mode.
+    phase_labels : list of int, optional
+        Phase (1 to 5) of each round. Defaults to the output of
+        :func:`~statrl.settings.bandits.batch.agents.baba_schedule.compute_baba_grid`
+        for ``horizon`` and ``nbArms``.
+    epoch_ids : list of int, optional
+        One-based epoch index of each round, from the same source.
+    epoch_I : dict, optional
+        Maps each epoch id to its boundary ``Ir``, from the same source.
+    kl_type : {'bernoulli', 'gaussian'}, default='bernoulli'
+        Parametric divergence used by the elimination test.
+    variance : float, default=0.25
+        Reward variance :math:`V`, used only when ``kl_type='gaussian'``.
+
+    Attributes
+    ----------
+    T_target : int
+        The horizon the schedule was built for. Running past it wraps the
+        phase and epoch lookups modulo their length, which repeats the
+        schedule rather than extending it, so results beyond ``T_target``
+        do not reflect the intended algorithm.
+
+    See Also
+    --------
+    statrl.settings.bandits.batch.agents.baba_schedule.compute_baba_grid :
+        Builds the batch sizes, phases, and epochs BABA runs on.
+
+    References
+    ----------
+    .. [1] Jin, T., Tang, J., Xu, P., Huang, K., Xiao, X. and Gu, Q.
+           "Almost optimal anytime algorithm for batched multi-armed bandits."
+           *International Conference on Machine Learning (ICML)*, 2021.
     """
 
     def __init__(self, nbArms, horizon=100_000, bound=1.0,
@@ -115,6 +149,13 @@ class BABA(BatchBanditAgent):
     # ------------------------------------------------------------------
 
     def reset(self):
+        """Clear every statistic and rewind to the first round of the schedule.
+
+        Resets the cumulative arm counts and means, the epoch-level state (the
+        current leader, the phase-1 winner, the elimination flag), and the
+        snapshots taken at the end of phases 1 and 2. The schedule itself is
+        fixed at construction and is not recomputed.
+        """
         self._round = 0
 
         # Cumulative arm statistics (updated via batchupdate)
@@ -140,6 +181,19 @@ class BABA(BatchBanditAgent):
     # ------------------------------------------------------------------
 
     def batchplay(self, B):
+        """Commit a batch, dispatching on the current round's phase.
+
+        Parameters
+        ----------
+        B : int
+            Number of pulls in this batch.
+
+        Returns
+        -------
+        list of int
+            Exactly ``B`` arm indices, chosen by the rule of the phase this
+            round belongs to.
+        """
         phase = self._current_phase()
         Ir    = self._current_Ir()
 
@@ -235,6 +289,20 @@ class BABA(BatchBanditAgent):
     # ------------------------------------------------------------------
 
     def batchupdate(self, batcharm, batchreward):
+        """Fold in the batch's rewards, then advance the phase state machine.
+
+        Updates the cumulative counts and empirical means, then applies the
+        transition belonging to the phase just played : recording the phase-1
+        leader, snapshotting its mean after phase 2, running the elimination
+        test in phase 3, and finally increments the round counter.
+
+        Parameters
+        ----------
+        batcharm : list of int
+            The arms that were pulled.
+        batchreward : list of float
+            The rewards observed for them, in the same order.
+        """
         # ── update cumulative arm statistics ──────────────────────────────
         for arm, rew in zip(batcharm, batchreward):
             self._counts[arm]      += 1

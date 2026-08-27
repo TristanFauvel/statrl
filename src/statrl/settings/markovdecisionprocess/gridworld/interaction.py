@@ -12,8 +12,33 @@ from statrl.settings.markovdecisionprocess.gridworld.renderers.textRenderer impo
 from statrl.experiments.onerun import Interaction
 
 class MDPInteraction(Interaction):
+    """Interaction loop for the discrete MDP setting.
+
+    Drives ``play(state)`` -> ``step(action)`` -> ``update(state, action,
+    reward, next_state)`` for a fixed number of rounds.
+
+    On a terminal transition the environment is reset and the run continues.
+    """
 
     def run(self, env: DiscreteMDP, learner: MDPAgent, horizon: int) -> np.ndarray:
+        """Run one interaction and return its cumulative expected score.
+
+        Parameters
+        ----------
+        env : DiscreteMDP
+            The MDP instance. Reset at the start, and again after any terminal
+            transition.
+        learner : MDPAgent
+            The agent, reset with the initial state.
+        horizon : int
+            Number of steps to play.
+
+        Returns
+        -------
+        ndarray of shape (horizon,)
+            Cumulative sum of the *expected* rewards of the visited
+            state-action pairs.
+        """
         observation, info = env.reset()
         learner.reset(observation)
 
@@ -34,6 +59,18 @@ class MDPInteraction(Interaction):
         return np.cumsum(steps_scores)
 
     def renderrun(self, env: DiscreteMDP, learner: MDPAgent, horizon: int) -> None:
+        """Run one interaction, printing each step to stdout.
+
+        Parameters
+        ----------
+        env : DiscreteMDP
+            The MDP instance. Its ``renderers`` list is overwritten with a
+            text renderer.
+        learner : MDPAgent
+            The agent.
+        horizon : int
+            Number of steps to play.
+        """
         env.renderers= [GridworldRenderer()]
         observation, info = env.reset()
         learner.reset(observation)
@@ -56,6 +93,7 @@ class MDPInteraction(Interaction):
 
     @property
     def plotlabels(self):
+        """tuple of (str, str): Axis labels ``(x, y)`` for the regret plots."""
         return ("Time step", "Regret")
 
 

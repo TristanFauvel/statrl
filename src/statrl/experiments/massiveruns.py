@@ -13,16 +13,71 @@ ROOT="results/"
 
 
 def runLargeMulticoreExperiment(env: Any, agents: list[Any], oracle: Any, interact: Any, timeHorizon: int=1000, nbReplicates: int=100, root_folder: str=ROOT) -> None:
-    '''  Note: Runs single interaction of oracle with envs to compute oracle score ref.
-    :param env:
-    :param agents:
-    :param oracle:
-    :param timeHorizon:
-    :param opttimeHorizon:
-    :param nbReplicates:
-    :param root_folder:
-    :return:
-    '''
+    """Benchmark several agents on one environment and plot their regret.
+
+    For each agent it runs ``nbReplicates`` independent interactions in parallel, runs the oracle for
+    the same number, computes regret as the oracle's cumulative score minus each agent's, and writes 
+    a logfile and regret figures under ``root_folder``. 
+
+    Parameters
+    ----------
+    env : object
+        Environment to benchmark on. Must expose ``name``; an optional
+        ``displayname`` is used as the figure title when present.
+    agents : list of object
+        Agents to compare. Their ``name`` attributes must be distinct — dump
+        filenames and plot legends are keyed on them, so duplicates silently
+        merge two agents' results.
+    oracle : object
+        Reference agent defining zero regret, and the only one required to
+        expose a ``policy`` (it is written to the logfile). Must belong to the
+        same setting as ``agents``.
+    interact : statrl.experiments.onerun.Interaction
+        Interaction loop of the setting, shared by every agent in the run.
+    timeHorizon : int, default=1000
+        Number of rounds per interaction.
+    nbReplicates : int, default=100
+        Number of independent runs per agent. Regret quantiles are taken
+        across these, so a handful of replicates gives a very rough band.
+    root_folder : str, default='results/'
+        Output directory, created if absent. Must end with a separator.
+
+    Returns
+    -------
+    None
+        Everything is written to disk. ``root_folder`` receives a
+        ``logfile_*.txt``, one ``regret_*`` pickle per agent, and the figures
+        ``Regrets_*.png`` / ``.pdf`` in linear and log-y scale. The
+        intermediate ``aux_*`` dumps are deleted on the way out.
+
+    See Also
+    --------
+    statrl.experiments.parallelruns.multicoreRuns : The parallel layer underneath.
+    statrl.experiments.analyzeruns.computeScoreDiffs : Turns the dumps into regret statistics.
+    statrl.experiments.plotruns.plotScoreDiffs : Draws the figures.
+
+    Notes
+    -----
+    Cost grows as ``(len(agents) + 1) * nbReplicates * timeHorizon``. Start
+    small — the defaults already amount to 100 000 rounds per agent.
+
+    Examples
+    --------
+    >>> from statrl.settings.bandits.stochastic.anytime.envs.parametric import BernoulliBandit
+    >>> from statrl.settings.bandits.stochastic.anytime.agents.IMED import IMED
+    >>> from statrl.settings.bandits.stochastic.anytime.agents._Oracle import Oracle
+    >>> from statrl.settings.bandits.stochastic.anytime.agents._Random import Random
+    >>> from statrl.settings.bandits.stochastic.anytime.interaction import BanditInteraction
+    >>> from statrl.settings.utils import klBern
+    >>> env = BernoulliBandit([0.2, 0.9, 0.5])              # doctest: +SKIP
+    >>> runLargeMulticoreExperiment(                        # doctest: +SKIP
+    ...     env,
+    ...     agents=[IMED(env.number_arms, klBern), Random(env)],
+    ...     oracle=Oracle(env),
+    ...     interact=BanditInteraction(),
+    ...     timeHorizon=1000, nbReplicates=50,
+    ... )
+    """
     os.makedirs(root_folder, exist_ok=True)
 
     envName = env.name

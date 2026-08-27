@@ -9,8 +9,46 @@ from statrl.settings.bandits.stochastic.anytime.renderers.textrenderer import Te
 
 from statrl.experiments.onerun import Interaction
 class BanditInteraction(Interaction):
+    """Interaction loop for the known-horizon stochastic bandit setting.
+
+    Identical to the anytime loop except that the horizon is passed to
+    ``learner.reset(horizon)`` instead of being withheld.
+
+    See Also
+    --------
+    statrl.settings.bandits.stochastic.anytime.interaction.BanditInteraction :
+        The anytime counterpart.
+
+    Examples
+    --------
+    >>> from statrl.settings.bandits.stochastic.anytime.envs.parametric import BernoulliBandit
+    >>> from statrl.settings.bandits.stochastic.anytime.agents.IMED import IMED
+    >>> from statrl.settings.bandits.stochastic.knownhorizon.wrappers.wrapper_anytime_knownhorizon import (
+    ...     AnytimeToKnownHorizonAgentWrapper)
+    >>> env = BernoulliBandit([0.2, 0.9, 0.5])
+    >>> agent = AnytimeToKnownHorizonAgentWrapper(IMED(env.number_arms))
+    >>> BanditInteraction().run(env, agent, horizon=50).shape
+    (50,)
+    """
 
     def run(self, env:StochasticBanditEnv, learner:BanditAgent, horizon: int) -> np.ndarray:
+        """Run one interaction and return its cumulative expected score.
+
+        Parameters
+        ----------
+        env : ~statrl.settings.bandits.stochastic.anytime.environment.StochasticBanditEnv
+            The bandit instance; the same class as in the anytime setting,
+            since only the agent interface differs between the two.
+        learner : ~statrl.settings.bandits.stochastic.knownhorizon.agent.BanditAgent
+            The agent, reset with ``horizon`` so it can plan against it.
+        horizon : int
+            Number of rounds to play.
+
+        Returns
+        -------
+        ndarray of shape (horizon,)
+            Cumulative sum of the *expected* rewards of the arms played.
+        """
         env.reset()
         learner.reset(horizon)
 
@@ -28,7 +66,20 @@ class BanditInteraction(Interaction):
         return np.cumsum(steps_scores)
 
     def renderrun(self, env: StochasticBanditEnv, learner: BanditAgent, horizon: int) -> None:
+        """Run one interaction, printing each round to stdout.
 
+        Parameters
+        ----------
+        env : ~statrl.settings.bandits.stochastic.anytime.environment.StochasticBanditEnv
+            The bandit instance. A
+            :class:`~statrl.settings.bandits.stochastic.anytime.renderers.textrenderer.Textrenderer`
+            is *appended* to its ``renderers``, so calling this twice on the
+            same environment prints every round twice.
+        learner : ~statrl.settings.bandits.stochastic.knownhorizon.agent.BanditAgent
+            The agent.
+        horizon : int
+            Number of rounds to play.
+        """
         env.renderers.append(Textrenderer())
         env.reset()
         learner.reset(horizon)
@@ -48,6 +99,7 @@ class BanditInteraction(Interaction):
 
     @property
     def plotlabels(self):
+        """tuple of (str, str): Axis labels ``(x, y)`` for the regret plots."""
         return ("Time step", "Regret")
 
 

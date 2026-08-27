@@ -6,6 +6,47 @@ import numpy as np
 
 ROOT= "results/"
 def plotScoreDiffs(learnersName: list[str], envName: str, title, mean: list[np.ndarray], median: list[np.ndarray], quantile1: list[np.ndarray], quantile2: list[np.ndarray],quantile3: list[np.ndarray],quantile4: list[np.ndarray], times: list[int], timeHorizon: int, logfile: Any='', timestamp: Any=0, root_folder: str=ROOT) -> None:
+    """Draw the regret figures and record final regrets in the logfile.
+
+    Each agent gets a mean curve with markers, a dashed median, and two nested
+    shaded bands (0.1-0.9 and 0.25-0.75).  
+
+    Parameters
+    ----------
+    learnersName : list of str
+        Agent names, used as legend labels and in the output filename.
+    envName : str
+        Environment name, used in the output filename.
+    title : tuple of (str, str, str)
+        ``(figure_title, xlabel, ylabel)``. The two labels come from
+        :attr:`~statrl.experiments.onerun.Interaction.plotlabels`.
+    mean, median : list of ndarray
+        Per-agent mean and median regret over time.
+    quantile1, quantile2, quantile3, quantile4 : list of ndarray
+        Per-agent regret quantiles at levels 0.1, 0.25, 0.75, and 0.9.
+    times : list of int
+        Sampled time steps, shared by every series.
+    timeHorizon : int
+        Horizon of the runs, used for the x-limit and in the filename.
+    logfile : file-like, default=''
+        Where final regrets are written. The default empty string selects
+        :data:`sys.stdout`.
+    timestamp : str, default=0
+        Suffix making the filename unique across runs.
+    root_folder : str, default='results/'
+        Output directory. Must end with a separator.
+
+    Returns
+    -------
+    None
+        Writes ``Regrets_<agents>_<horizon>_<env>_<timestamp>`` as ``.png``
+        and ``.pdf``, plus an ``_ylog`` pair with a logarithmic ``y`` axis.
+
+    Notes
+    -----
+    Colours and markers cycle after 9 and 5 agents respectively, so beyond
+    that two agents become hard to tell apart.
+    """
     if (logfile==''):
         logfile=sys.stdout
     nbFigure = pl.gcf().number+1

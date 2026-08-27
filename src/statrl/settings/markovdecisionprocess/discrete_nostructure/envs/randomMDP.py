@@ -7,6 +7,46 @@ import numpy as np
 
 
 class RandomMDP(DiscreteMDP):
+    """Randomly generated finite MDP with sparse transitions and rewards.
+
+    Draws a transition kernel and reward function at random under sparsity
+    constraints, so most state-action pairs pay nothing and each reaches only
+    a few successors. 
+    
+    Parameters
+    ----------
+    nbStates : int
+        Number of states.
+    nbActions : int
+        Number of actions.
+    maxProportionSupportTransition : float, default=0.5
+        Probability that a given successor gets non-zero mass.
+    maxProportionSupportReward : float, default=0.1
+        Probability that a state-action pair is rewarding at all.
+    maxProportionSupportStart : float, default=0.2
+        Probability that a state is in the support of the initial
+        distribution.
+    minNonZeroProbability : float, default=0.2
+        Floor applied to non-zero probabilities.
+    minNonZeroReward : float, default=0.3
+        Floor applied to non-zero mean rewards.
+    rewardStd : float, default=0.5
+        Reward standard deviation.  
+    ergodic : float, default=0.0
+        Floor applied to every transition probability. Leave at ``0`` for a
+        sparse kernel, or raise it to guarantee an ergodic instance.
+    seed : int, optional
+        Seed for the *generation*. 
+    name : str, default='RandomMDP'
+        Label used in logfiles, plot titles, and dump filenames.
+
+    Notes
+    -----
+    If the draw yields an all-zero reward function, one random pair is forced
+    to be rewarding, otherwise the instance would be degenerate and every
+    policy optimal.
+    """
+
     def __init__(self, nbStates, nbActions, maxProportionSupportTransition=0.5, maxProportionSupportReward=0.1,
                  maxProportionSupportStart=0.2, minNonZeroProbability=0.2, minNonZeroReward=0.3, rewardStd=0.5,ergodic=0.00,
                  seed=None,name="RandomMDP"):
@@ -75,12 +115,46 @@ class RandomMDP(DiscreteMDP):
         super(RandomMDP, self).__init__(self.nS, self.nA, self.P, self.rewards, self.startdistribution, seed=None,name=name)
 
     def sparserand(self, p=0.5, min=0., max=1.):
+        """Draw a value in ``[min, max]`` with probability ``p``, else zero.
+
+        Parameters
+        ----------
+        p : float, default=0.5
+            Probability of a non-zero draw.
+        min, max : float, default=0.0, 1.0
+            Bounds of the uniform draw when it is non-zero.
+
+        Returns
+        -------
+        float
+            A uniform draw in ``[min, max]``, or ``0``.
+        """
         u = self.np_random.random()
         if (u <= p):
             return min + self.np_random.random() * (max - min)
         return 0.
 
     def reshapeDistribution(self, distribution, p):
+        """Renormalize a distribution so every non-zero entry is at least ``p``.
+
+        Zeroes entries below ``p``, then repeatedly tops up random entries
+        until the mass is restored, and finally renormalizes. This keeps the
+        generated kernel free of vanishingly small probabilities that would be
+        unlearnable in any realistic horizon.
+
+        Parameters
+        ----------
+        distribution : array-like of float
+            The distribution to reshape.
+        p : float
+            Minimum mass for a non-zero entry.
+
+        Returns
+        -------
+        list of float
+            A distribution summing to one whose non-zero entries are all at
+            least ``p``.
+        """
         mdistribution = [0 if x < p else x for x in distribution]
         mass = sum(mdistribution)
         while (mass < 0.99999999):
