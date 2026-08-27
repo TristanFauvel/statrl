@@ -146,8 +146,6 @@ class PSRL(MDPAgent):
         # Cumulative visits over previous episodes.
         self.Nk = np.zeros((self.nS, self.nA))
 
-        self.Nkmax = 0
-
         # ---------------------------------------------------------
         # Planning variables
         # ---------------------------------------------------------
@@ -200,7 +198,6 @@ class PSRL(MDPAgent):
         self.observations = [[inistate], [], []]
         self.vk = np.zeros((self.nS, self.nA))
         self.Nk = np.zeros((self.nS, self.nA))
-        self.Nkmax = 0
         self.u = np.zeros(self.nS)
         self.policy = np.zeros((self.nS, self.nA))
 
@@ -214,24 +211,25 @@ class PSRL(MDPAgent):
 
         self.new_episode()
 
-  
-    def VI(self, epsilon=0.01, max_iter=1000):
-        """ The Extend Value Iteration algorithm (approximated with precision epsilon), in parallel policy updated with the greedy one.
-        Solve the sampled MDP by average-reward value iteration.
 
-        Iterates the Bellman operator on the bias function until its span
-        contracts below ``epsilon``, and stores the greedy policy. Ties are
-        broken towards the least-visited action, which keeps exploration going
-        among actions the sampled model cannot separate.
+    def VI(self, epsilon=0.01, max_iter=1000):
+        """Solve the sampled MDP by average-reward (relative) value iteration.
+
+        Iterates the Bellman operator on the bias function until the span of
+        successive iterate differences contracts below ``epsilon``
+        (Puterman & Chan, "Markov Decision Processes and Reinforcement
+        Learning", Ch. 7, Algorithm 7.1), then computes the greedy policy for
+        the converged bias function. Ties among greedy actions are broken
+        uniformly among the least-visited ones, to keep exploring where the
+        sampled model cannot distinguish actions.
 
         Parameters
         ----------
         epsilon : float, default=0.01
             Stopping threshold on the span of successive bias differences.
-        max_iter : float, default=1000
-            Iteration cap. On reaching it the current iterate is kept and a
-            non-convergence warning is printed, so the run continues with an
-            unconverged policy rather than failing.
+        max_iter : int, default=1000
+            Maximum number of sweeps. If reached without convergence, the
+            current iterate is kept and a warning is printed.
         """
         u0 = self.u - min(self.u)
         u1 = np.zeros(self.nS)
@@ -240,9 +238,7 @@ class PSRL(MDPAgent):
             for s in range(self.nS):
                 temp = np.zeros(self.nA)
                 for a in range(self.nA):
-                    # print("Support of ", s,a," : ", self.supports[s, a], ", ", support)
-                    p = self.p_sampled[s, a]  # Allowed to sum  to <=1
-                    # print("Max_p of ",s,a, " : ", max_p)
+                    p = self.p_sampled[s, a]
                     temp[a] = self.r_sampled[s, a] + sum([u0[ns] * p[ns] for ns in range(self.nS)])
                 u1[s] = max(temp)
 
@@ -281,7 +277,6 @@ class PSRL(MDPAgent):
         The value-iteration precision tightens as ``1 / t``, so early episodes
         are solved coarsely and later ones exactly.
         """
-        self.sumratios = 0.
         self.updateN()
 
         for s in range(self.nS):
@@ -299,14 +294,11 @@ class PSRL(MDPAgent):
     def updateN(self):
         """Auxiliary function to update N the current state-action count.
 
-        Adds ``vk`` into ``Nk``, refreshes the running maximum, and zeroes
-        ``vk`` for the next episode.
+        Adds ``vk`` into ``Nk`` and zeroes ``vk`` for the next episode.
         """
-        self.Nkmax = 0.
         for s in range(self.nS):
             for a in range(self.nA):
                 self.Nk[s, a] += self.vk[s, a]
-                self.Nkmax = max(self.Nkmax, self.Nk[s, a])
                 self.vk[s, a] = 0
 
      
@@ -332,7 +324,6 @@ class PSRL(MDPAgent):
         stays negligible against the horizon.
         """
         action = categorical_sample([self.policy[state, a] for a in range(self.nA)], np.random)
-        # if self.sumratios >= 1.:  # Stoppping criterion
         if self.vk[state, action] >= max([1, self.Nk[state, action]]):  # Stopping criterion
             self.new_episode()
             action = categorical_sample([self.policy[state, a] for a in range(self.nA)], np.random)
