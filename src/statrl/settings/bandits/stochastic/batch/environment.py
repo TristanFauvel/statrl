@@ -108,7 +108,7 @@ class BatchMAB(MAB):
         """
         B= self.batchsize(self.round)
         assert len(action)==B
-        batchreward = []
+        batchreward: list[float] = []
         batchmean = []
         for arm, group in groupby(action):
             distribution = self.mab.rewarddistributions[arm]
