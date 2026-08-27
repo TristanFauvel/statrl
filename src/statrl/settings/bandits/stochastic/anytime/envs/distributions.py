@@ -33,7 +33,7 @@ class Arm:
     """
 
     def __init__(
-        self, dist: Any, sampler: Optional[Callable[[], float]] = None
+        self, dist: Any, sampler: Optional[Callable[..., Any]] = None
     ) -> None:
         self._dist = dist
         self._sampler = sampler
@@ -50,6 +50,12 @@ class Arm:
         if self._sampler is not None:
             return self._sampler()
         return self._dist.rvs()
+
+    def sample_many(self, size: int) -> np.ndarray:
+        """Draw several independent rewards in one vectorized call."""
+        if self._sampler is not None:
+            return np.asarray(self._sampler(size=size))
+        return np.asarray(self._dist.rvs(size=size))
 
 
 def Bernoulli(p: float) -> Arm:
