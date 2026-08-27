@@ -54,9 +54,11 @@ def _kl_plus(mu: float, mu_star: float, kl_fn) -> float:
 
 class BABA(BatchBanditAgent):
     """Batched Anytime Bandit Algorithm
+
     BABA divides the run into *epochs*, each split into five phases with a
     fixed role: uniform exploration, exploitation of the leader, an
-    elimination test, a correction pass, and a final exploitation phase.  
+    elimination test, a correction pass, and a final exploitation phase, as
+    described by Jin et al. [1]_.
 
     Parameters
     ----------

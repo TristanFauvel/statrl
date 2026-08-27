@@ -7,7 +7,7 @@ class ALFLearner(Agent):
     """Adversarial Lipschitz Forecaster
 
     Learns in a continuous Lipschitz bandit/online optimization setting
-    by reducing to a finite expert set.
+    by reducing to a finite expert set, following Maillard and Munos [1]_.
 
     Parameters
     ----------
