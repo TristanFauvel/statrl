@@ -3,7 +3,18 @@ from statrl.settings.bandits.stochastic.kernel.agent import KernelBanditAgent
 from statrl.settings.bandits.stochastic.kernel.environment import KernelBanditEnv
 
 class Random(KernelBanditAgent):
-    """Uniform exploration."""
+    """Uniform exploration.
+
+    Parameters
+    ----------
+    env : ~statrl.settings.bandits.stochastic.kernel.environment.KernelBanditEnv
+        The environment.
+
+    See Also
+    --------
+    statrl.settings.bandits.stochastic.kernel.agents._Oracle.Oracle :
+        The opposite baseline, which always exploits.
+    """
 
     def __init__(self, env: KernelBanditEnv) -> None:
         self.env = env
