@@ -10,3 +10,32 @@ ergoriverwsim_6:
   kwargs:
     nbStates: 6
     ergodic: 0.001
+
+
+
+randomS10A3:
+  entrypoint: "randomMDP:RandomMDP"
+  kwargs:
+    nbStates: 10
+    nbActions: 3
+    maxProportionSupportTransition: 0.5
+    maxProportionSupportReward: 0.1
+    maxProportionSupportStart: 0.2
+    minNonZeroProbability: 0.2
+    minNonZeroReward: 0.3
+    rewardStd: 0.5
+    ergodic: 0.00
+
+
+randomS50A3:
+  entrypoint: "randomMDP:RandomMDP"
+  kwargs:
+    nbStates: 50
+    nbActions: 3
+    maxProportionSupportTransition: 0.5
+    maxProportionSupportReward: 0.1
+    maxProportionSupportStart: 0.2
+    minNonZeroProbability: 0.2
+    minNonZeroReward: 0.3
+    rewardStd: 0.5
+    ergodic: 0.00

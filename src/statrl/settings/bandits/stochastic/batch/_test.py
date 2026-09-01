@@ -1,4 +1,4 @@
-from statrl.settings.bandits.stochastic.batch.envs.parametric import BatchBernoulliBandit
+from statrl.settings.bandits.stochastic.batch.envs.parametric import BatchBernoulliBandit, BatchTruncatedGaussianBandit
 from statrl.settings.bandits.stochastic.batch.agents._Oracle import Oracle
 from statrl.settings.bandits.stochastic.batch.agents._Random import Random
 from statrl.settings.bandits.stochastic.batch.interaction import BatchBanditInteraction
@@ -32,23 +32,29 @@ def test_massive() -> None:
     #from statrl.settings.bandits.batch.agents.BatchIMED import BatchIMED
     from statrl.settings.bandits.stochastic.batch.agents.BCB import BCB
     from statrl.settings.bandits.stochastic.batch.agents.BABA import BABA
+    from statrl.settings.bandits.stochastic.batch.agents.BABA import BABA2
     means=[0.2,0.9,0.7,0.5]
 
-    env = BatchBernoulliBandit(means,batchschedule="linear")
+    env = BatchBernoulliBandit(means,batchschedule="quadratic")
+    #env = BatchTruncatedGaussianBandit(means,batchschedule="linear")
     #SETUP timehorizon appropriately when changing batchschedule.
     interaction = BatchBanditInteraction()
+    horizon=30
     oracle = Oracle(env)
     agents = [BCB(env.number_arms),
-              BABA(env.number_arms, horizon=50),
+              BABA(env.number_arms, horizon=horizon),
+              BABA2(env.number_arms, horizon=horizon),
+              BABA2(env.number_arms, horizon=horizon, bound=1.0,
+                   kl_type='bernoulli' if 'bern' in env.name else 'gaussian'),
               #BatchIMED(env.number_arms,bound=1,batchagnostic=True),
               #BatchIMED(env.number_arms,bound=1,batchagnostic=False)
               ]
-    runLargeMulticoreExperiment(env,agents,oracle, interaction,timeHorizon=50,  nbReplicates=30)
+    runLargeMulticoreExperiment(env,agents,oracle, interaction,timeHorizon=horizon,  nbReplicates=300)
 
 
 
 if __name__ == "__main__":
     #test_render()
-    test_run()
+    #test_run()
     #test_load()
     test_massive()

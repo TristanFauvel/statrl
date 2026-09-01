@@ -39,7 +39,8 @@ class BatchBanditAgent(ABC):
 
     def reset(self) -> None:
         """Start a new independent run, reseeding the agent's generator."""
-        self.np_random, self.seed = seeding.np_random(self.seed)
+        #self.np_random, self.seed = seeding.np_random(self.seed)
+        pass
 
     def play(self) -> int:
         """Choose a single arm.

@@ -8,6 +8,7 @@ from statrl.settings.markovdecisionprocess.discrete_nostructure.agent import  MD
 
 
 from statrl.settings.markovdecisionprocess.discrete_nostructure.renderers.textRenderer import TextRenderer
+from statrl.settings.markovdecisionprocess.discrete_nostructure.renderers.htmlRenderer import HTMLRenderer
 
 from statrl.experiments.onerun import Interaction
 
@@ -72,7 +73,7 @@ class MDPInteraction(Interaction):
         horizon : int
             Number of steps to play.
         """
-        env.renderers= [TextRenderer()]
+        env.renderers= [TextRenderer(),HTMLRenderer()]
         observation, info = env.reset()
         learner.reset(observation)
 

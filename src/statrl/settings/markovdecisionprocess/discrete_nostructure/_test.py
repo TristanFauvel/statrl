@@ -9,6 +9,7 @@ def test_render() -> None:
 
     nS=6
     env = RiverSwim(nS)
+    env.displayname="Riverswim - 6 states"
     random = Random(env)
     oracle = Oracle(env)
     interaction = MDPInteraction()
@@ -20,7 +21,11 @@ def test_load() -> None:
 
     from statrl.experiments.utils import load, make
     envs = load("envs/environments.yaml")
-    env = make(envs["riverswim_6"])
+    env = make(envs["randomS10A3"])
+    env.displayname="RandomMDP S10 A3"
+
+    #env = make(envs["randomS50A3"])
+    #env.displayname="RandomMDP S50 A3"
 
     random = Random(env)
     interaction = MDPInteraction()
@@ -57,7 +62,7 @@ def test_massive() -> None:
 
 
 if __name__ == "__main__":
-    test_render()
-    test_run()
+    #test_render()
+    #test_run()
     test_load()
-    test_massive()
+    #test_massive()
