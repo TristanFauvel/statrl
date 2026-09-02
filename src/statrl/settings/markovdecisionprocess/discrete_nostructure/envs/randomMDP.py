@@ -70,7 +70,7 @@ class RandomMDP(DiscreteMDP):
                 self.P[s][a] = []
                 self.transitions[s][a] = {}
                 my_mean = self.sparserand(p=maxProportionSupportReward, min=minNonZeroReward,max=0.99)
-                if False and (rewardStd > 0 and my_mean > 0 and my_mean < 1):
+                if (rewardStd > 0 and my_mean > 0 and my_mean < 1):
                     ma, mb = (0 - my_mean) / rewardStd, (1 - my_mean) / rewardStd
                     self.rewards[s][a] = stat.truncnorm(ma, mb, loc=my_mean, scale=rewardStd)
                 else:
