@@ -1,0 +1,66 @@
+
+grid-random-1616:
+  entrypoint: "gridworld:GridWorld"
+  kwargs:
+    map_name: "random"
+    sizeX: 16
+    sizeY: 16
+    initialSingleStateDistribution: False
+    density: 0.4
+    lengthofwalks: 5
+    nbGoals: 1
+    rewardStd: 0.01
+    seed: 7
+
+grid-random-1212:
+  entrypoint: "gridworld:GridWorld"
+  kwargs:
+    map_name: "random"
+    sizeX: 12
+    sizeY: 12
+    initialSingleStateDistribution: False
+    density: 0.4
+    lengthofwalks: 5
+    nbGoals: 1
+    rewardStd: 0.01
+    seed: 5
+
+grid-random-88:
+  entrypoint: "gridworld:GridWorld"
+  kwargs:
+    map_name: "random"
+    sizeX: 8
+    sizeY: 8
+    initialSingleStateDistribution: False
+    density: 0.4
+    lengthofwalks: 5
+    nbGoals: 1
+    rewardStd: 0.01
+    seed: 1 #,#16 16 7# 12 12 5 # 8 8 1
+
+grid-2-room:
+  entrypoint: "gridworld:GridWorld"
+  kwargs:
+    sizeX: 9
+    sizeY: 11
+    map_name: "2-room"
+    initialSingleStateDistribution: True
+    start: [1,1]
+    nbGoals: 1
+    goal: [7,9]
+    rewardStd: 0.0
+    seed: 1
+
+grid-4-room:
+  entrypoint: "gridworld:GridWorld"
+  kwargs:
+    sizeX: 7
+    sizeY: 7
+    map_name: "4-room"
+    initialSingleStateDistribution: True
+    start: [1,1]
+    nbGoals: 1
+    goal: [5,5]
+    rewardStd: 0.0
+    seed: 1
+    slippery: 0.1
