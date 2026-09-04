@@ -50,7 +50,7 @@ class GridworldWithWallRenderer:
     def _nameActions(self, env) -> str:
         return string.ascii_uppercase[:env.nA]
 
-    def render(self,env,current,lastaction,lastreward):
+    def render(self,env,last):
         """Print the grid with the current cell highlighted.
 
         Parameters
@@ -65,6 +65,7 @@ class GridworldWithWallRenderer:
             Reward just observed.
         """
 
+        current, lastaction, lastreward = last
         if (not self.started):
             self.start(env)
             self.started = True
@@ -119,7 +120,7 @@ class GridworldRenderer:
             The environment being rendered.
         """
         self.outfile = sys.stdout
-        self.outfile.write("Environment: " + str(env.name) + "\n")
+        self.outfile.write("Environment: " + str(env.displayname) + "\n")
         self.outfile.write("Actions: " + str(self._nameActions(env)) + "\n")
         self.outfile.write("Legend: Red=current state, X=wall, G=goal state\n")
         self.outfile.write("-" * 30 + "\n")
@@ -138,7 +139,7 @@ class GridworldRenderer:
     def _nameActions(self, env) -> str:
         return string.ascii_uppercase[:env.nA]
 
-    def render(self,env,current,lastaction,lastreward):
+    def render(self,env,last):
         """Print the grid with the current cell highlighted.
 
         Parameters
@@ -153,6 +154,7 @@ class GridworldRenderer:
             Reward just observed.
         """
 
+        current, lastaction, lastreward = last
         if (not self.started):
             self.start(env)
             self.started = True

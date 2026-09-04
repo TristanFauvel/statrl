@@ -1,6 +1,7 @@
 
 grid-random-1616:
-  entrypoint: "gridworld:GridWorld"
+  entrypoint: "gridworlds:GridWorld"
+  displayname: "Random GridWorld map 16x16 states"
   kwargs:
     map_name: "random"
     sizeX: 16
@@ -13,7 +14,8 @@ grid-random-1616:
     seed: 7
 
 grid-random-1212:
-  entrypoint: "gridworld:GridWorld"
+  entrypoint: "gridworlds:GridWorld"
+  displayname: "Random GridWorld map 12x12 states"
   kwargs:
     map_name: "random"
     sizeX: 12
@@ -26,7 +28,8 @@ grid-random-1212:
     seed: 5
 
 grid-random-88:
-  entrypoint: "gridworld:GridWorld"
+  entrypoint: "gridworlds:GridWorld"
+  displayname: "Random GridWorld map 8x8 states"
   kwargs:
     map_name: "random"
     sizeX: 8
@@ -39,7 +42,8 @@ grid-random-88:
     seed: 1 #,#16 16 7# 12 12 5 # 8 8 1
 
 grid-2-room:
-  entrypoint: "gridworld:GridWorld"
+  entrypoint: "gridworlds:GridWorld"
+  displayname: "2-room gridworld 9x11 states"
   kwargs:
     sizeX: 9
     sizeY: 11
@@ -52,7 +56,8 @@ grid-2-room:
     seed: 1
 
 grid-4-room:
-  entrypoint: "gridworld:GridWorld"
+  entrypoint: "gridworlds:GridWorld"
+  displayname: "4-room gridworld 9x11 states"
   kwargs:
     sizeX: 7
     sizeY: 7
