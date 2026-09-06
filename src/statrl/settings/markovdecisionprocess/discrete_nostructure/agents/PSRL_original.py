@@ -26,9 +26,10 @@ in :meth:`PSRLOriginal.VI`, each marked inline below:
 """
 
 
+import numpy as np
 import scipy.stats as stat
 from statrl.settings.markovdecisionprocess.discrete_nostructure.agent import MDPAgent
-from statrl.settings.utils import *
+from statrl.settings.utils import allmax, categorical_sample
 
 
 class PSRLOriginal(MDPAgent):
