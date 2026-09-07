@@ -1,25 +1,28 @@
 """
-Posterior Sampling Reinforcement Learning (PSRL).
+Posterior Sampling Reinforcement Learning (PSRL) - original reference version.
 
-This module implements Posterior Sampling Reinforcement Learning (PSRL),
-also known as Thompson Sampling for reinforcement learning, for finite
-Markov Decision Processes with Bernoulli rewards.
+This module preserves, verbatim, the PSRL implementation as it stood
+before the bug fixe. It is kept for reference only.
 
-The algorithm maintains Bayesian posterior distributions over both the
-reward function and the transition kernel of the unknown MDP. At the
-beginning of every episode, a complete MDP model is sampled from the
-posterior. The optimal policy of this sampled model is then computed
-using Value Iteration and executed until an episode stopping criterion
-is met.
+Relative to the fixed version, this implementation has three known bugs
+in :meth:`PSRLOriginal.VI`, each marked inline below:
 
-The implementation follows the episodic version introduced in
+1. The span-seminorm convergence test took ``abs(u1 - u0)`` before
+   computing the span, which can cause premature termination (the span
+   seminorm must be applied to the *signed* difference; Puterman & Chan,
+   "Markov Decision Processes and Reinforcement Learning", Ch. 7,
+   Algorithm 7.1).
+2. The iteration cap check (``itera > max_iter``, with ``itera``
+   starting at 0) let the loop run ``max_iter + 2`` sweeps before
+   warning, instead of ``max_iter``.
+3. The greedy policy was written on every sweep from ``u0`` (the
+   not-yet-converged iterate), while ``self.u`` ends up storing ``u1``
+   (the newer, converged iterate) - so the policy that is kept is the
+   one computed against the previous (stale) VI iterate, not the
+   converged one.
 
-    Osband, Russo and Van Roy,
-    "(More) Efficient Reinforcement Learning via Posterior Sampling",
-    NeurIPS 2013.
-
-Reward distributions are modeled by Beta posteriors, while transition
-probabilities are modeled by Dirichlet posteriors.
+    Reference : Osband, Russo and Van Roy,"(More) Efficient Reinforcement Learning via Posterior Sampling",
+    NeurIPS 2013. 
 """
 
 
@@ -29,9 +32,9 @@ from statrl.settings.markovdecisionprocess.discrete_nostructure.agent import MDP
 from statrl.settings.utils import allmax, categorical_sample
 
 
-class PSRL(MDPAgent):
+class PSRLOriginal(MDPAgent):
     """
-    Posterior Sampling Reinforcement Learning.
+    Posterior Sampling Reinforcement Learning (pre-fix reference version).
 
     PSRL is a Bayesian model-based reinforcement learning algorithm for
     finite Markov Decision Processes.
@@ -146,6 +149,8 @@ class PSRL(MDPAgent):
         # Cumulative visits over previous episodes.
         self.Nk = np.zeros((self.nS, self.nA))
 
+        self.Nkmax = 0
+
         # ---------------------------------------------------------
         # Planning variables
         # ---------------------------------------------------------
@@ -182,22 +187,14 @@ class PSRL(MDPAgent):
         # Transition kernel sampled from the posterior.
         self.p_sampled = np.zeros((self.nS, self.nA, self.nS))
 
+
+    # To reinitialize the learner with a given initial state inistate.
     def reset(self, inistate):
-        """Clear every statistic, restore the priors, and open the first episode.
-
-        Reward counts restart at ``Beta(1, 1)`` and transition pseudo-counts
-        at a flat ``Dirichlet(1, ..., 1)``, i.e. uniform priors, before an
-        initial model is sampled and solved.
-
-        Parameters
-        ----------
-        inistate : int
-            State the environment was reset to.
-        """
         self.t = 1
         self.observations = [[inistate], [], []]
         self.vk = np.zeros((self.nS, self.nA))
         self.Nk = np.zeros((self.nS, self.nA))
+        self.Nkmax = 0
         self.u = np.zeros(self.nS)
         self.policy = np.zeros((self.nS, self.nA))
 
@@ -212,65 +209,55 @@ class PSRL(MDPAgent):
         self.new_episode()
 
 
+    # The Extend Value Iteration algorithm (approximated with precision epsilon), in parallel policy updated with the greedy one.
     def VI(self, epsilon=0.01, max_iter=1000):
-        """Solve the sampled MDP by average-reward (relative) value iteration.
 
-        Iterates the Bellman operator on the bias function until the span of
-        successive iterate differences contracts below ``epsilon``
-        (Puterman & Chan, "Markov Decision Processes and Reinforcement
-        Learning", Ch. 7, Algorithm 7.1), then computes the greedy policy for
-        the converged bias function. Ties among greedy actions are broken
-        uniformly among the least-visited ones, to keep exploring where the
-        sampled model cannot distinguish actions.
-
-        Parameters
-        ----------
-        epsilon : float, default=0.01
-            Stopping threshold on the span of successive bias differences.
-        max_iter : int, default=1000
-            Maximum number of sweeps. If reached without convergence, the
-            current iterate is kept and a warning is printed.
-        """
         u0 = self.u - min(self.u)
         u1 = np.zeros(self.nS)
+        itera = 0
 
-        for _ in range(max_iter):
+        while True:
             for s in range(self.nS):
-                temp = self.r_sampled[s] + self.p_sampled[s] @ u0
-                u1[s] = np.max(temp)
+                temp = np.zeros(self.nA)
+                for a in range(self.nA):
+                    # print("Support of ", s,a," : ", self.supports[s, a], ", ", support)
+                    p = self.p_sampled[s, a]  # Allowed to sum  to <=1
+                    # print("Max_p of ",s,a, " : ", max_p)
+                    temp[a] = self.r_sampled[s, a] + sum([u0[ns] * p[ns] for ns in range(self.nS)])
 
-            diff = u1 - u0
-            if max(diff) - min(diff) < epsilon:
+                # BUG (fixed in the current PSRL by computing the policy once,
+                # after VI has converged): this writes self.policy on every
+                # sweep from u0, the not-yet-converged iterate, while
+                # self.u below ends up storing u1 (the newer iterate) -- so
+                # the kept policy is greedy w.r.t. a stale VI iterate.
+                # This implements a tie-breaking rule by choosing:  Uniform(Argmmin(Nk))
+                (u1[s], arg) = allmax(temp)
+                nn = [-self.Nk[s, a] for a in arg]
+                (nmax, arg2) = allmax(nn)
+                choice = [arg[a] for a in arg2]
+                self.policy[s] = [1. / len(choice) if x in choice else 0 for x in range(self.nA)]
+
+            # BUG (fixed in the current PSRL): the span seminorm must be
+            # applied to the signed difference u1 - u0, not abs(u1 - u0);
+            # taking abs() here can trigger premature convergence.
+            diff = [abs(x - y) for (x, y) in zip(u1, u0)]
+            if (max(diff) - min(diff)) < epsilon:
+                self.u = u1 - min(u1)
                 break
-            u0 = u1 - min(u1)
-            u1 = np.zeros(self.nS)
-        else:
-            print("[PSRL] No convergence in the VI at time ", self.t, " before ", max_iter, " iterations.")
-
-        self.u = u1 - min(u1)
-
-        # Greedy policy w.r.t. the converged bias function, tie-breaking by
-        # choosing: Uniform(Argmin(Nk)) among the greedy actions.
-        for s in range(self.nS):
-            temp = self.r_sampled[s] + self.p_sampled[s] @ self.u
-            (_, arg) = allmax(temp)
-            nn = [-self.Nk[s, a] for a in arg]
-            (_, arg2) = allmax(nn)
-            choice = [arg[a] for a in arg2]
-            self.policy[s] = [1. / len(choice) if x in choice else 0 for x in range(self.nA)]
+            elif itera > max_iter:
+                # BUG (fixed in the current PSRL): itera starts at 0 and this
+                # check is `itera > max_iter`, so the loop runs
+                # max_iter + 2 sweeps before warning instead of max_iter.
+                self.u = u1 - min(u1)
+                print("[PSRL] No convergence in the VI at time ", self.t, " before ", max_iter, " iterations.")
+                break
+            else:
+                u0 = u1 - min(u1)
+                u1 = np.zeros(self.nS)
+                itera += 1
 
     def new_episode(self):
-        """Fold in the last episode's counts, sample a fresh MDP, and solve it.
-
-        Draws a reward mean per state-action pair from its Beta posterior and
-        a transition row from its Dirichlet posterior, then runs :meth:`VI` on
-        that sampled model. Sampling a *whole* MDP rather than perturbing each
-        pair independently is what makes the exploration coherent across
-        states — the policy commits to one plausible world for the episode.
-
-        The value-iteration precision tightens as ``1 / t``, so early episodes
-        are solved coarsely and later ones exactly.
-        """
+        self.sumratios = 0.
         self.updateN()
 
         for s in range(self.nS):
@@ -284,61 +271,27 @@ class PSRL(MDPAgent):
         self.VI(epsilon=1. / max(1, self.t))
 
     ###### Steps and updates functions ######
- 
-    def updateN(self):
-        """Auxiliary function to update N the current state-action count.
 
-        Adds ``vk`` into ``Nk`` and zeroes ``vk`` for the next episode.
-        """
+    # Auxiliary function to update N the current state-action count.
+    def updateN(self):
+        self.Nkmax = 0.
         for s in range(self.nS):
             for a in range(self.nA):
                 self.Nk[s, a] += self.vk[s, a]
+                self.Nkmax = max(self.Nkmax, self.Nk[s, a])
                 self.vk[s, a] = 0
 
-     
+    # To chose an action for a given state (and start a new episode if necessary -> stopping criterion defined here).
     def play(self, state):
-        """Sample an action from the current policy, starting an episode if due.
-
-        Parameters
-        ----------
-        state : int
-            Current state.
-
-        Returns
-        -------
-        int
-            The chosen action.
-
-        Notes
-        -----
-        The doubling stopping criterion ends an episode as soon as a
-        state-action pair has been visited as often within it as in all
-        previous episodes combined. This bounds the number of episodes
-        logarithmically, so the cost of resampling and re-solving the MDP
-        stays negligible against the horizon.
-        """
         action = categorical_sample([self.policy[state, a] for a in range(self.nA)], np.random)
+        # if self.sumratios >= 1.:  # Stoppping criterion
         if self.vk[state, action] >= max([1, self.Nk[state, action]]):  # Stopping criterion
             self.new_episode()
             action = categorical_sample([self.policy[state, a] for a in range(self.nA)], np.random)
-        return action 
-    
-    def update(self, state, action, reward, observation):
-        """Update the learner (the Beta and Dirichlet posteriors) with one transition (one step of the current policy).
+        return action
 
-        Parameters
-        ----------
-        state : int
-            State the action was taken in.
-        action : int
-            Action taken.
-        reward : float
-            Observed reward, treated as Bernoulli: it is added to the success
-            count and its complement to the failure count. Rewards outside
-            :math:`[0, 1]` therefore corrupt the posterior.
-        observation : int
-            State reached; increments that transition's pseudo-count.
-        """
+    # To update the learner after one step of the current policy.
+    def update(self, state, action, reward, observation):
         self.vk[state, action] += 1
         self.observations[0].append(observation)
         self.observations[1].append(action)
@@ -351,6 +304,3 @@ class PSRL(MDPAgent):
         self.p_pseudoCounts[state,action,observation] +=1
 
         self.t += 1
-
-
-

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from gymnasium.utils import seeding
 
 
 class BatchBanditAgent(ABC):
