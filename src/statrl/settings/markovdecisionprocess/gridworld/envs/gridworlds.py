@@ -11,7 +11,7 @@ import numpy as np
 import scipy.stats as stat
 #import matplotlib.pyplot as plt
 
-from statrl.settings.markovdecisionprocess.discrete_nostructure.environment import  DiscreteMDP
+from statrl.settings.markovdecisionprocess.gridworld.environment import DiscreteMDP
 
 #from gym import utils
 #from gym.src.toy_text import discrete
@@ -546,6 +546,7 @@ class GridWorld(DiscreteMDP):
         self.nA = 4
         self.nS_all = sizeX * sizeY
         self.nameActions = ["Up", "Down", "Left", "Right"]
+        self.last = (None, None, 0.)
 
 
         self.seed(seed)
@@ -665,8 +666,8 @@ class GridWorld(DiscreteMDP):
         r = rewarddis.rvs()
         m = rewarddis.mean()
         self.s = s
-        self.lastaction = a
-        self.lastreward = r
+        self.last = (s, a,r)
+
         return s, r, d,False, {"mean":m}
 
     def seed(self, seed=None):
@@ -705,7 +706,7 @@ class GridWorld(DiscreteMDP):
         super().reset(seed=seed, options=options)
         self.np_random, seed = seeding.np_random(seed)
         self.s = categorical_sample(self.isd, self.np_random)
-        self.lastaction = None
+        self.last = (self.s,None, 0.)
         return self.s, {"mean":0}
 
     def makeGoalStates(self, nb):

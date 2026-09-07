@@ -66,6 +66,7 @@ class GridworldWithWallRenderer:
         """
 
         current, lastaction, lastreward = last
+        self.outfile.write(f"LAST:{current}, {lastaction}, {lastreward}")
         if (not self.started):
             self.start(env)
             self.started = True
@@ -158,6 +159,7 @@ class GridworldRenderer:
         if (not self.started):
             self.start(env)
             self.started = True
+        self.outfile.write(f"LAST:{current}, {lastaction}, {lastreward}")
 
         # Print the MDP in text mode.
         # Red  = current state

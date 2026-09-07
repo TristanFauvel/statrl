@@ -19,12 +19,12 @@ def test_load() -> None:
 
     from statrl.experiments.utils import load, make
     envs = load("envs/environments.yaml")
-    env = make(envs["grid-random-1212"])
+    env = make(envs["grid-random-88"])
 
     random = Random(env)
     interaction = MDPInteraction()
 
-    interaction.renderrun(env, random, 10)
+    interaction.renderrun(env, random, 40)
 
 def test_run() -> None:
     env = GridWorld(sizeX=3,sizeY=3)
