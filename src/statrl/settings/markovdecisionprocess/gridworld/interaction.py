@@ -7,7 +7,8 @@ from statrl.settings.markovdecisionprocess.gridworld.environment import Discrete
 from statrl.settings.markovdecisionprocess.gridworld.agent import  MDPAgent
 
 
-from statrl.settings.markovdecisionprocess.gridworld.renderers.textRenderer import GridworldRenderer
+from statrl.settings.markovdecisionprocess.gridworld.renderers.textRenderer import GridworldRenderer as TextRenderer
+from statrl.settings.markovdecisionprocess.gridworld.renderers.htmlrenderer import GridWorldHTMLRenderer as HTMLRenderer
 
 from statrl.experiments.onerun import Interaction
 
@@ -71,7 +72,7 @@ class MDPInteraction(Interaction):
         horizon : int
             Number of steps to play.
         """
-        env.renderers= [GridworldRenderer()]
+        env.renderers= [TextRenderer(), HTMLRenderer()]
         observation, info = env.reset()
         learner.reset(observation)
 
@@ -79,7 +80,9 @@ class MDPInteraction(Interaction):
         for t in range(horizon):
             state = observation
             action = learner.play(state)  # Get action
+            #print(f"{state},{action}")
             observation, reward, done, truncated, info = env.step(action)
+            #print(f"{observation},{reward}, {done}, {truncated}, {info}")
             learner.update(state, action, reward, observation)  # Update learners
 
             if done:

@@ -1720,10 +1720,9 @@ if __name__ == "__main__":
                 1: [(1.0, 4, True)],
             },
         }
-        R = {
-            s: {a: _Reward(0.0) for a in actions}
-            for s in states
-        }
+        R = {}
+        for s in states:
+            R[s] = {a: _Reward(0.0) for a in actions}
         nameActions = ["Left", "Right"]
 
     env = _DemoEnv()

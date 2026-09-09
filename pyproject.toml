@@ -4,19 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "statrl"
-version = "0.0.1"
+version = "1.2609"
 description = "The Statistical Reinforcement Learning Toolkit Library"
-authors = [{ name = "Odalric-Ambym Maillard", email = "odalric.maillard@inria.fr" }]
+authors = [{ name = "Odalric-Ambrym Maillard", email = "odalricambrym.maillard@inria.fr" }]
 readme = "README.md"
 license = { text = "MIT" }
 classifiers = ["License :: OSI Approved :: MIT License"]
 requires-python = ">=3.9"
 dependencies = [
     "gymnasium>=1.0",
-    "numpy>=2.1",
-    "joblib>=1.4",
+    "numpy>=2.5",
+    "joblib>=1.5",
     "matplotlib>=3.9",
-    "scipy>=1.11",
+    "scipy>=1.17",
     "pyyaml>=6.0",
 ]
 
